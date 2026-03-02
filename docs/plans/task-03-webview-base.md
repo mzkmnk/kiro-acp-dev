@@ -31,11 +31,13 @@ WebviewViewProvider の実装、HTML/CSS/JS の作成、postMessage 通信の確
   - `webview.asWebviewUri()` で CSS/JS の URI 変換
   - CSP ヘッダー設定:
     ```html
-    <meta http-equiv="Content-Security-Policy"
+    <meta
+      http-equiv="Content-Security-Policy"
       content="default-src 'none';
         style-src ${webview.cspSource};
         script-src 'nonce-${nonce}';
-        font-src ${webview.cspSource};">
+        font-src ${webview.cspSource};"
+    />
     ```
 - [ ] `postMessage()` ラッパー — Extension Host → Webview へメッセージ送信
 

@@ -60,6 +60,6 @@ ACP Agent（kiro-cli）からのリクエストに応答するハンドラを実
 
 - [Kiro CLI ACP ドキュメント](https://kiro.dev/docs/cli/acp/) — Agent → Client メソッド概要
 - [ACP File System](https://agentclientprotocol.com/protocol/file-system) — fs/read_text_file, fs/write_text_file 仕様
-- [ACP Terminals](https://agentclientprotocol.com/protocol/terminals) — terminal/* メソッド仕様
+- [ACP Terminals](https://agentclientprotocol.com/protocol/terminals) — terminal/\* メソッド仕様
 - [VSCode workspace.fs API](https://code.visualstudio.com/api/references/vscode-api#FileSystem) — ファイル読み書き
 - [VSCode Terminal API](https://code.visualstudio.com/api/references/vscode-api#Terminal) — ターミナル操作

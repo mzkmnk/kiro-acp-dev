@@ -75,7 +75,7 @@ ACP（Agent Client Protocol）の JSON-RPC 2.0 通信で使用するすべての
 - [ACP Content](https://agentclientprotocol.com/protocol/content) — text / image / resource_link コンテンツ型
 - [ACP Tool Calls](https://agentclientprotocol.com/protocol/tool-calls) — ToolCall, ToolCallUpdate
 - [ACP File System](https://agentclientprotocol.com/protocol/file-system) — fs/read_text_file, fs/write_text_file
-- [ACP Terminals](https://agentclientprotocol.com/protocol/terminals) — terminal/* メソッド
+- [ACP Terminals](https://agentclientprotocol.com/protocol/terminals) — terminal/\* メソッド
 - [ACP Session Modes](https://agentclientprotocol.com/protocol/session-modes) — session/set_mode, session/set_model
 - [ACP Slash Commands](https://agentclientprotocol.com/protocol/slash-commands) — スラッシュコマンド仕様
 - [ACP Extensibility](https://agentclientprotocol.com/protocol/extensibility) — カスタムメソッドの命名規則
