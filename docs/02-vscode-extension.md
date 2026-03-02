@@ -97,12 +97,14 @@ kiro-acp-dev/
 ### 1. extension.ts（エントリポイント）
 
 責務:
+
 - `activate()`: ACP Client の初期化、WebviewViewProvider の登録、コマンド登録
 - `deactivate()`: ACP Client の終了（子プロセス kill）
 
 ### 2. acp/client.ts（ACP Client）
 
 責務:
+
 - `kiro-cli acp` の子プロセス spawn・管理
 - JSON-RPC 2.0 メッセージの送受信
 - リクエスト ID の管理、レスポンスの Promise 解決
@@ -110,6 +112,7 @@ kiro-acp-dev/
 - プロセスクラッシュ時の自動再起動
 
 主要メソッド:
+
 - `start()` - プロセス起動 + initialize
 - `stop()` - プロセス終了
 - `newSession(cwd)` - session/new
@@ -120,15 +123,17 @@ kiro-acp-dev/
 ### 3. acp/types.ts（型定義）
 
 ACP プロトコルの TypeScript 型定義:
+
 - JSON-RPC リクエスト/レスポンス/通知
 - initialize パラメータ/結果
-- session/* パラメータ/結果
+- session/\* パラメータ/結果
 - session/update の各更新タイプ
 - Kiro 独自拡張メソッド
 
 ### 4. webview/chat-view-provider.ts（WebviewViewProvider）
 
 責務:
+
 - `vscode.WebviewViewProvider` の実装
 - Webview の HTML/CSS/JS 生成
 - Webview ↔ Extension Host 間の `postMessage` ブリッジ
@@ -137,6 +142,7 @@ ACP プロトコルの TypeScript 型定義:
 ### 5. webview/main.ts（Webview 側スクリプト）
 
 責務:
+
 - チャット UI のレンダリング・更新
 - ユーザー入力の処理
 - `acquireVsCodeApi()` による Extension Host との通信
@@ -209,11 +215,13 @@ ACP プロトコルの TypeScript 型定義:
 ### Webview CSP（Content Security Policy）
 
 ```html
-<meta http-equiv="Content-Security-Policy"
+<meta
+  http-equiv="Content-Security-Policy"
   content="default-src 'none';
     style-src ${webview.cspSource};
     script-src 'nonce-${nonce}';
-    font-src ${webview.cspSource};">
+    font-src ${webview.cspSource};"
+/>
 ```
 
 ### ファイルシステム操作
