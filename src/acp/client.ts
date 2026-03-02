@@ -54,6 +54,8 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 const PROCESS_SHUTDOWN_GRACE_MS = 3_000;
 /** Maximum number of automatic restart attempts. / 自動再起動の最大試行回数。 */
 const MAX_RESTARTS = 3;
+/** Maximum number of characters per RPC trace log line. / RPC トレース1行あたりの最大文字数。 */
+const MAX_RPC_TRACE_CHARS = 3_000;
 
 /**
  * ACP client implementation that manages process lifecycle and JSON-RPC transport.
@@ -66,6 +68,8 @@ export class AcpClient {
   private readonly outputChannel: vscode.OutputChannel;
   /** Request timeout per JSON-RPC call. / JSON-RPC 呼び出しごとのタイムアウト。 */
   private readonly requestTimeoutMs: number;
+  /** Whether stdin/stdout JSON-RPC traffic tracing is enabled. / JSON-RPC 通信トレースの有効フラグ。 */
+  private readonly traceRpc: boolean;
   /** Map of unresolved requests keyed by request ID. / 未解決リクエストを ID で管理するマップ。 */
   private readonly pendingRequests = new Map<number, PendingRequest>();
   /** Registry for Agent→Client request handlers. / Agent→Client リクエストハンドラの登録表。 */
@@ -91,9 +95,16 @@ export class AcpClient {
    * @param options - Optional runtime options for logging and request timeout.
    *                  ログ出力先とリクエストタイムアウトの任意設定。
    */
-  constructor(options?: { outputChannel?: vscode.OutputChannel; requestTimeoutMs?: number }) {
+  constructor(options?: {
+    outputChannel?: vscode.OutputChannel;
+    requestTimeoutMs?: number;
+    traceRpc?: boolean;
+  }) {
     this.outputChannel = options?.outputChannel ?? vscode.window.createOutputChannel('Kiro ACP');
     this.requestTimeoutMs = options?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    this.traceRpc =
+      options?.traceRpc ??
+      vscode.workspace.getConfiguration('kiro-acp').get<boolean>('traceRpc', false);
   }
 
   /**
@@ -348,6 +359,7 @@ export class AcpClient {
    */
   private handleMessage(rawLine: string): void {
     try {
+      this.logRpcTraffic('IN', rawLine);
       const classified = classifyJsonRpcMessage(JSON.parse(rawLine));
 
       if (classified.type === 'response') {
@@ -511,6 +523,7 @@ export class AcpClient {
     }
 
     const payload = `${JSON.stringify(message)}\n`;
+    this.logRpcTraffic('OUT', payload);
     await new Promise<void>((resolve, reject) => {
       this.process?.stdin.write(payload, (error) => {
         if (error) {
@@ -536,5 +549,18 @@ export class AcpClient {
       pending.reject(error);
       this.pendingRequests.delete(id);
     }
+  }
+
+  private logRpcTraffic(direction: 'IN' | 'OUT', payload: string): void {
+    if (!this.traceRpc) {
+      return;
+    }
+
+    const trimmed = payload.trimEnd();
+    const preview =
+      trimmed.length > MAX_RPC_TRACE_CHARS
+        ? `${trimmed.slice(0, MAX_RPC_TRACE_CHARS)}... [truncated ${trimmed.length - MAX_RPC_TRACE_CHARS} chars]`
+        : trimmed;
+    this.outputChannel.appendLine(`[ACP ${direction}] ${preview}`);
   }
 }

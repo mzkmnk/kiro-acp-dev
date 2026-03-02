@@ -19,25 +19,25 @@
 
 ### activate()
 
-- [ ] ACP Client インスタンス生成
-- [ ] `ChatViewProvider` インスタンス生成（ACP Client を注入）
-- [ ] `vscode.window.registerWebviewViewProvider("kiro-acp.chatView", provider)` で登録
-- [ ] コマンド登録
+- [x] ACP Client インスタンス生成
+- [x] `ChatViewProvider` インスタンス生成（ACP Client を注入）
+- [x] `vscode.window.registerWebviewViewProvider("kiro-acp.chatView", provider)` で登録
+- [x] コマンド登録
   - `kiro-acp.newSession` → ACP Client の `newSession()` 呼び出し
   - `kiro-acp.cancelRequest` → ACP Client の `cancel()` 呼び出し
-- [ ] 全 Disposable を `context.subscriptions` に push
+- [x] 全 Disposable を `context.subscriptions` に push
 
 ### deactivate()
 
-- [ ] ACP Client の `stop()` 呼び出し（子プロセス kill）
+- [x] ACP Client の `stop()` 呼び出し（子プロセス kill）
 
 ### メッセージブリッジ（ChatViewProvider 内で実装）
 
-- [ ] Webview → Extension Host:
+- [x] Webview → Extension Host:
   - `prompt` → ACP Client の `prompt()` 呼び出し
   - `cancel` → ACP Client の `cancel()` 呼び出し
   - `newSession` → ACP Client の `newSession()` 呼び出し
-- [ ] ACP Client → Webview:
+- [x] ACP Client → Webview:
   - `session/update` の `AgentMessageChunk` → `{ type: "agentMessageChunk", text }` を postMessage
   - `session/update` の `TurnEnd` → `{ type: "turnEnd" }` を postMessage
   - `session/update` の `ToolCall` → `{ type: "toolCall", name, status }` を postMessage

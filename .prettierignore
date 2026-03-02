@@ -2,3 +2,5 @@ dist
 out
 .vscode
 *.vsix
+
+pnpm-lock.yaml

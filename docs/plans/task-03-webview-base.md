@@ -21,12 +21,12 @@ WebviewViewProvider の実装、HTML/CSS/JS の作成、postMessage 通信の確
 
 ### ChatViewProvider（Extension Host 側）
 
-- [ ] `ChatViewProvider` クラス — `vscode.WebviewViewProvider` を実装
+- [x] `ChatViewProvider` クラス — `vscode.WebviewViewProvider` を実装
   - viewType: `"kiro-acp.chatView"`（package.json の views と一致）
-- [ ] `resolveWebviewView()` 実装
+- [x] `resolveWebviewView()` 実装
   - `webview.options` — `{ enableScripts: true, localResourceRoots: [extensionUri] }`
   - `webview.html` — `getHtmlForWebview()` で生成
-- [ ] `getHtmlForWebview()` — HTML テンプレート生成
+- [x] `getHtmlForWebview()` — HTML テンプレート生成
   - nonce 生成（CSP 用）
   - `webview.asWebviewUri()` で CSS/JS の URI 変換
   - CSP ヘッダー設定:
@@ -39,15 +39,15 @@ WebviewViewProvider の実装、HTML/CSS/JS の作成、postMessage 通信の確
         font-src ${webview.cspSource};"
     />
     ```
-- [ ] `postMessage()` ラッパー — Extension Host → Webview へメッセージ送信
+- [x] `postMessage()` ラッパー — Extension Host → Webview へメッセージ送信
 
 ### Webview ↔ Extension Host メッセージ型
 
-- [ ] Webview → Extension Host:
+- [x] Webview → Extension Host:
   - `{ type: "prompt", text: string }` — ユーザーがメッセージ送信
   - `{ type: "cancel" }` — リクエストキャンセル
   - `{ type: "newSession" }` — 新規セッション作成
-- [ ] Extension Host → Webview:
+- [x] Extension Host → Webview:
   - `{ type: "agentMessageChunk", text: string }` — ストリーミングテキスト
   - `{ type: "toolCall", name: string, status: string }` — ツール呼び出し通知
   - `{ type: "toolCallUpdate", name: string, content: string }` — ツール進捗
@@ -57,24 +57,24 @@ WebviewViewProvider の実装、HTML/CSS/JS の作成、postMessage 通信の確
 
 ### チャット UI（Webview 側）
 
-- [ ] `webview/index.html` — 最小構成
+- [x] `webview/index.html` — 最小構成
   - メッセージ表示エリア（`#messages`）
   - 入力欄（`<textarea>`）+ 送信ボタン
   - CSS/JS の読み込み（nonce 付き `<script>`）
-- [ ] `webview/main.ts`
+- [x] `webview/main.ts`
   - `acquireVsCodeApi()` で VSCode API 取得
   - 送信ボタン / Enter キーで `{ type: "prompt", text }` を postMessage
   - `window.addEventListener("message")` で Extension Host からのメッセージ受信
   - 受信した `agentMessageChunk` をメッセージ表示エリアに追記
   - `turnEnd` でメッセージ確定
-- [ ] `webview/style.css`
+- [x] `webview/style.css`
   - VSCode テーマ CSS 変数を使用（`--vscode-editor-background`, `--vscode-editor-foreground` 等）
   - メッセージバブル（ユーザー / エージェント）
   - 入力エリアのスタイル
 
 ### ビルド設定
 
-- [ ] `esbuild.mjs` に webview 用エントリポイント追加
+- [x] `esbuild.mjs` に webview 用エントリポイント追加
   - `webview/main.ts` → `dist/webview.js`
   - platform: `"browser"`（Node.js API 不可）
   - external: なし（vscode モジュールは使わない）

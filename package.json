@@ -19,7 +19,7 @@
       "activitybar": [
         {
           "id": "kiro-acp",
-          "title": "Kiro",
+          "title": "KIRO-CLI",
           "icon": "media/kiro-icon.svg"
         }
       ]
@@ -29,7 +29,7 @@
         {
           "type": "webview",
           "id": "kiro-acp.chatView",
-          "name": "Chat"
+          "name": ""
         }
       ]
     },
@@ -50,6 +50,11 @@
           "type": "string",
           "default": "",
           "description": "kiro-cli の絶対パス（空の場合は PATH から検索）"
+        },
+        "kiro-acp.traceRpc": {
+          "type": "boolean",
+          "default": true,
+          "description": "ACPのJSON-RPC送受信をOutput(Kiro ACP)へ詳細出力する"
         }
       }
     }
@@ -69,7 +74,10 @@
     "package": "pnpm run check-types && node esbuild.mjs --production"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^20.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "latest",
     "@typescript-eslint/parser": "latest",
@@ -77,8 +85,16 @@
     "eslint": "latest",
     "eslint-config-prettier": "latest",
     "npm-run-all": "^4.1.5",
+    "postcss": "^8.5.6",
+    "postcss-cli": "^11.0.1",
     "prettier": "latest",
+    "tailwindcss": "^4.2.1",
     "typescript": "^5.7.0",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "lucide-react": "^0.576.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   }
 }
