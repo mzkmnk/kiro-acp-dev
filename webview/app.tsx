@@ -3,7 +3,7 @@ import * as React from 'react';
 import { ChatView } from './components/chat/chat-view';
 import { useChatController } from './logic/use-chat-controller';
 
-export function App(): JSX.Element {
+export function App(): React.JSX.Element {
   const { controller, state } = useChatController();
 
   return (
