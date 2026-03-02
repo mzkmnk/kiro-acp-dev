@@ -1,0 +1,217 @@
+import * as React from 'react';
+import { Square, Plus, ArrowUp, Wrench, Play, X, ChevronDown } from 'lucide-react';
+
+import { Button } from '../ui/button';
+import { ScrollArea } from '../ui/scroll-area';
+import { Textarea } from '../ui/textarea';
+import { cn } from '../../lib/utils';
+import type { ChatItem, QueuedPrompt } from '../../logic/types';
+
+export interface ChatViewProps {
+  items: ChatItem[];
+  queue: QueuedPrompt[];
+  streaming: boolean;
+  onSubmitPrompt: (text: string) => void;
+  onCancel: () => void;
+  onNewSession: () => void;
+  onSendQueuedNow: (queuedPromptId: string) => void;
+  onRemoveQueued: (queuedPromptId: string) => void;
+}
+
+export function ChatView({
+  items,
+  queue,
+  streaming,
+  onSubmitPrompt,
+  onCancel,
+  onNewSession,
+  onSendQueuedNow,
+  onRemoveQueued,
+}: ChatViewProps): JSX.Element {
+  const [prompt, setPrompt] = React.useState('');
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  React.useEffect(() => {
+    if (!scrollRef.current) {
+      return;
+    }
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [items, streaming]);
+
+  React.useEffect(() => {
+    if (!textareaRef.current) {
+      return;
+    }
+
+    textareaRef.current.style.height = '0px';
+    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 220)}px`;
+  }, [prompt]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmitPrompt(prompt);
+    setPrompt('');
+  };
+
+  return (
+    <div className="relative h-full overflow-hidden bg-[color-mix(in_srgb,var(--vscode-sideBar-background)_88%,#d4d8e2_12%)] text-[var(--vscode-sideBar-foreground)]">
+      <header className="sticky top-0 z-10 bg-[var(--vscode-sideBar-background)]/95 px-3 py-2 backdrop-blur">
+        <div className="flex items-center justify-between gap-2">
+          <div />
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={onNewSession}
+              title="New chat"
+              className="h-6 w-6 border-0 bg-transparent p-0 hover:bg-transparent"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <ScrollArea ref={scrollRef} className="h-[calc(100%-132px)] px-3 py-3">
+        <div className="space-y-2.5">
+          {items.map((item) => (
+            <MessageRow key={item.id} item={item} />
+          ))}
+        </div>
+
+        {streaming ? (
+          <div className="mt-2 inline-flex items-center gap-2 text-xs text-[var(--vscode-descriptionForeground)]">
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--vscode-textLink-foreground)] before:absolute before:inset-0 before:animate-ping before:rounded-full before:bg-[var(--vscode-textLink-foreground)]" />
+            Kiro is thinking...
+          </div>
+        ) : null}
+
+      </ScrollArea>
+
+      <footer className="absolute inset-x-0 bottom-0 bg-[color-mix(in_srgb,var(--vscode-sideBar-background)_92%,#d4d8e2_8%)] p-3">
+        {queue.length > 0 ? (
+          <section className="mb-2 rounded-md border border-[var(--vscode-panel-border)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_88%,black_4%)] p-2">
+            <p className="mb-1 text-[11px] text-[var(--vscode-descriptionForeground)]">
+              Queued ({queue.length})
+            </p>
+            <div className="max-h-28 space-y-1.5 overflow-y-auto">
+              {queue.map((queuedItem) => (
+                <article
+                  key={queuedItem.id}
+                  className="flex items-start justify-between gap-2 rounded border border-[var(--vscode-panel-border)] px-2 py-1.5"
+                >
+                  <p className="line-clamp-2 text-[12px] leading-snug">{queuedItem.text}</p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Send now"
+                      onClick={() => onSendQueuedNow(queuedItem.id)}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Remove from queue"
+                      onClick={() => onRemoveQueued(queuedItem.id)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        <form
+          className="space-y-2 rounded-[28px] border border-[color-mix(in_srgb,var(--vscode-panel-border)_75%,#b7bcc8_25%)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_78%,#c7ccda_22%)] p-3"
+          onSubmit={handleSubmit}
+        >
+          <Textarea
+            ref={textareaRef}
+            rows={1}
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder="Message Kiro Agent — @ to include context"
+            className="max-h-[220px] resize-none"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-[12px] text-[var(--vscode-descriptionForeground)]">
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--vscode-panel-border)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_72%,#c5cad7_28%)]"
+                title="Add context"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-1">
+                auto
+                <ChevronDown className="h-3.5 w-3.5" />
+              </span>
+              <span>{streaming ? 'Generating... New send will be queued.' : 'Ready'}</span>
+            </div>
+            <Button
+              type={streaming && !prompt.trim() ? 'button' : 'submit'}
+              size="icon"
+              onClick={streaming && !prompt.trim() ? onCancel : undefined}
+              disabled={!streaming && !prompt.trim()}
+              className="h-9 w-9 rounded-full border border-[color-mix(in_srgb,var(--vscode-panel-border)_70%,#a5aabd_30%)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_65%,#9ea4b8_35%)] text-[var(--vscode-editor-foreground)]"
+              title={
+                streaming && !prompt.trim()
+                  ? 'Stop generation'
+                  : streaming
+                    ? 'Queue prompt'
+                    : 'Send prompt'
+              }
+            >
+              {streaming && !prompt.trim() ? (
+                <Square className="h-4 w-4" />
+              ) : (
+                <ArrowUp className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </form>
+      </footer>
+    </div>
+  );
+}
+
+function MessageRow({ item }: { item: ChatItem }): JSX.Element {
+  const isUser = item.role === 'user';
+  const isMeta = item.role === 'system' || item.role === 'error';
+  const isAgent = item.role === 'agent';
+
+  return (
+    <article className={cn('flex w-full gap-2', isUser ? 'justify-end' : 'justify-start')}>
+      {!isUser && isMeta ? (
+        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[var(--vscode-panel-border)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_80%,black_8%)] text-[10px] text-[var(--vscode-descriptionForeground)]">
+          <Wrench className="h-3 w-3" />
+        </span>
+      ) : null}
+      <div
+        className={cn(
+          'max-w-[88%] whitespace-pre-wrap px-1 py-1 text-[12px] leading-relaxed',
+          isAgent && 'border-0 bg-transparent',
+          isUser &&
+            'rounded-2xl border border-[color-mix(in_srgb,var(--vscode-panel-border)_65%,#b6bbca_35%)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_76%,#ced3df_24%)] px-3 py-2',
+          item.role === 'agent' &&
+            'text-[var(--vscode-editor-foreground)]',
+          item.role === 'system' &&
+            'rounded-xl border border-[var(--vscode-panel-border)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_86%,white_4%)] px-3 py-2 text-[12px] text-[var(--vscode-descriptionForeground)]',
+          item.role === 'error' &&
+            'rounded-xl border border-[var(--vscode-inputValidation-errorBorder)] bg-[var(--vscode-inputValidation-errorBackground)] px-3 py-2 text-[var(--vscode-inputValidation-errorForeground)]',
+        )}
+      >
+        {item.text}
+      </div>
+    </article>
+  );
+}

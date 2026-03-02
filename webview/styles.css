@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    'IBM Plex Sans', 'Space Grotesk', 'Noto Sans JP', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  line-height: 1.4;
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-sideBar-background);
+}
