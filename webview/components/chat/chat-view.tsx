@@ -32,9 +32,10 @@ marked.use({
     code(token) {
       const language = (token.lang || '').trim().toLowerCase();
       const value = token.text || '';
-      const highlighted = language && hljs.getLanguage(language)
-        ? hljs.highlight(value, { language }).value
-        : hljs.highlightAuto(value).value;
+      const highlighted =
+        language && hljs.getLanguage(language)
+          ? hljs.highlight(value, { language }).value
+          : hljs.highlightAuto(value).value;
       return `<pre><code class="hljs language-${language || 'plaintext'}">${highlighted}</code></pre>`;
     },
   },
