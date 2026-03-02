@@ -9,21 +9,21 @@ export interface JsonRpcError {
 }
 
 export interface JsonRpcRequest {
-  jsonrpc: "2.0";
+  jsonrpc: '2.0';
   id: number;
   method: string;
   params?: unknown;
 }
 
 export interface JsonRpcResponse {
-  jsonrpc: "2.0";
+  jsonrpc: '2.0';
   id: number;
   result?: unknown;
   error?: JsonRpcError;
 }
 
 export interface JsonRpcNotification {
-  jsonrpc: "2.0";
+  jsonrpc: '2.0';
   method: string;
   params?: unknown;
 }
@@ -82,23 +82,20 @@ export interface McpServerConfigStdio {
 }
 
 export interface McpServerConfigHttp {
-  type: "http";
+  type: 'http';
   name: string;
   url: string;
   headers: { name: string; value: string }[];
 }
 
 export interface McpServerConfigSse {
-  type: "sse";
+  type: 'sse';
   name: string;
   url: string;
   headers: { name: string; value: string }[];
 }
 
-export type McpServerConfig =
-  | McpServerConfigStdio
-  | McpServerConfigHttp
-  | McpServerConfigSse;
+export type McpServerConfig = McpServerConfigStdio | McpServerConfigHttp | McpServerConfigSse;
 
 export interface SessionNewParams {
   cwd: string;
@@ -124,19 +121,19 @@ export interface SessionLoadParams {
 // ============================================================
 
 export interface TextContent {
-  type: "text";
+  type: 'text';
   text: string;
 }
 
 export interface ImageContent {
-  type: "image";
+  type: 'image';
   data: string;
   mimeType: string;
   uri?: string;
 }
 
 export interface ResourceLinkContent {
-  type: "resource_link";
+  type: 'resource_link';
   uri: string;
   name: string;
   mimeType?: string;
@@ -146,7 +143,7 @@ export interface ResourceLinkContent {
 }
 
 export interface EmbeddedResourceContent {
-  type: "resource";
+  type: 'resource';
   resource: {
     uri: string;
     mimeType?: string;
@@ -170,12 +167,7 @@ export interface SessionPromptParams {
   prompt: PromptContent[];
 }
 
-export type StopReason =
-  | "end_turn"
-  | "max_tokens"
-  | "max_turn_requests"
-  | "refusal"
-  | "cancelled";
+export type StopReason = 'end_turn' | 'max_tokens' | 'max_turn_requests' | 'refusal' | 'cancelled';
 
 export interface SessionPromptResult {
   stopReason: StopReason;
@@ -194,39 +186,36 @@ export interface SessionCancelParams {
 // ============================================================
 
 export type ToolKind =
-  | "read"
-  | "edit"
-  | "delete"
-  | "move"
-  | "search"
-  | "execute"
-  | "think"
-  | "fetch"
-  | "other";
+  | 'read'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'execute'
+  | 'think'
+  | 'fetch'
+  | 'other';
 
-export type ToolCallStatus = "pending" | "in_progress" | "completed" | "failed";
+export type ToolCallStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
 
 export interface ToolCallContentBlock {
-  type: "content";
+  type: 'content';
   content: TextContent | ImageContent;
 }
 
 export interface ToolCallDiffContent {
-  type: "diff";
+  type: 'diff';
   path: string;
   oldText?: string;
   newText: string;
 }
 
 export interface ToolCallTerminalContent {
-  type: "terminal";
+  type: 'terminal';
   terminalId: string;
 }
 
-export type ToolCallContent =
-  | ToolCallContentBlock
-  | ToolCallDiffContent
-  | ToolCallTerminalContent;
+export type ToolCallContent = ToolCallContentBlock | ToolCallDiffContent | ToolCallTerminalContent;
 
 export interface ToolCallLocation {
   path: string;
@@ -234,17 +223,17 @@ export interface ToolCallLocation {
 }
 
 export interface AgentMessageChunk {
-  sessionUpdate: "agent_message_chunk";
+  sessionUpdate: 'agent_message_chunk';
   content: TextContent | ImageContent;
 }
 
 export interface UserMessageChunk {
-  sessionUpdate: "user_message_chunk";
+  sessionUpdate: 'user_message_chunk';
   content: TextContent | ImageContent;
 }
 
 export interface ToolCall {
-  sessionUpdate: "tool_call";
+  sessionUpdate: 'tool_call';
   toolCallId: string;
   title: string;
   kind?: ToolKind;
@@ -256,7 +245,7 @@ export interface ToolCall {
 }
 
 export interface ToolCallUpdate {
-  sessionUpdate: "tool_call_update";
+  sessionUpdate: 'tool_call_update';
   toolCallId: string;
   title?: string;
   kind?: ToolKind;
@@ -268,11 +257,11 @@ export interface ToolCallUpdate {
 }
 
 export interface TurnEnd {
-  sessionUpdate: "turn_end";
+  sessionUpdate: 'turn_end';
 }
 
 export interface CurrentModeUpdate {
-  sessionUpdate: "current_mode_update";
+  sessionUpdate: 'current_mode_update';
   modeId: string;
 }
 
@@ -287,7 +276,7 @@ export interface AvailableCommand {
 }
 
 export interface AvailableCommandsUpdate {
-  sessionUpdate: "available_commands_update";
+  sessionUpdate: 'available_commands_update';
   availableCommands: AvailableCommand[];
 }
 
@@ -326,11 +315,7 @@ export interface FsWriteTextFileParams {
 // Agent → Client リクエスト: Permission
 // ============================================================
 
-export type PermissionOptionKind =
-  | "allow_once"
-  | "allow_always"
-  | "reject_once"
-  | "reject_always";
+export type PermissionOptionKind = 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always';
 
 export interface PermissionOption {
   optionId: string;
@@ -345,8 +330,8 @@ export interface SessionRequestPermissionParams {
 }
 
 export type RequestPermissionOutcome =
-  | { outcome: "cancelled" }
-  | { outcome: "selected"; optionId: string };
+  | { outcome: 'cancelled' }
+  | { outcome: 'selected'; optionId: string };
 
 export interface SessionRequestPermissionResult {
   outcome: RequestPermissionOutcome;
