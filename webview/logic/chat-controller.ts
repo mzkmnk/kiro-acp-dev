@@ -70,7 +70,6 @@ export class ChatController {
       return;
     }
 
-    this.pushItem({ id: this.createId(), role: 'user', text: trimmed });
     if (this.inFlightTurns > 0) {
       this.enqueuePrompt(trimmed);
       return;
@@ -239,6 +238,7 @@ export class ChatController {
   }
 
   private dispatchPrompt(text: string): void {
+    this.pushItem({ id: this.createId(), role: 'user', text });
     this.inFlightTurns += 1;
     this.setState({ streaming: true });
     this.vscode.postMessage({ type: 'prompt', text });

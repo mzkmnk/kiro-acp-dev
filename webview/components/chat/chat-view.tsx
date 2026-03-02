@@ -1,7 +1,57 @@
 import * as React from 'react';
 import { Square, Plus, ArrowUp, Wrench, Play, X, ChevronDown } from 'lucide-react';
+import hljs from 'highlight.js/lib/core';
+import plaintext from 'highlight.js/lib/languages/plaintext';
+import typescript from 'highlight.js/lib/languages/typescript';
+import json from 'highlight.js/lib/languages/json';
+import bash from 'highlight.js/lib/languages/bash';
+import markdown from 'highlight.js/lib/languages/markdown';
+import { Marked } from 'marked';
 
 import type { ChatItem, QueuedPrompt } from '../../logic/types';
+
+hljs.registerLanguage('plaintext', plaintext);
+hljs.registerLanguage('text', plaintext);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('ts', typescript);
+hljs.registerLanguage('tsx', typescript);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('sh', bash);
+hljs.registerLanguage('shell', bash);
+hljs.registerLanguage('markdown', markdown);
+hljs.registerLanguage('md', markdown);
+
+const marked = new Marked({
+  breaks: true,
+  gfm: true,
+});
+
+marked.use({
+  renderer: {
+    code(token) {
+      const language = (token.lang || '').trim().toLowerCase();
+      const value = token.text || '';
+      const highlighted = language && hljs.getLanguage(language)
+        ? hljs.highlight(value, { language }).value
+        : hljs.highlightAuto(value).value;
+      return `<pre><code class="hljs language-${language || 'plaintext'}">${highlighted}</code></pre>`;
+    },
+  },
+});
+
+function escapeHtml(raw: string): string {
+  return raw
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function toSafeMarkdownHtml(text: string): string {
+  return marked.parse(escapeHtml(text)) as string;
+}
 
 export interface ChatViewProps {
   items: ChatItem[];
@@ -200,7 +250,14 @@ function MessageRow({ item }: { item: ChatItem }): React.JSX.Element {
                 : 'max-w-[88%] whitespace-pre-wrap px-1 py-1 text-[12px] leading-relaxed text-(--vscode-editor-foreground)'
         }
       >
-        {item.text}
+        {item.role === 'agent' ? (
+          <div
+            className="markdown-body"
+            dangerouslySetInnerHTML={{ __html: toSafeMarkdownHtml(item.text) }}
+          />
+        ) : (
+          item.text
+        )}
       </div>
     </article>
   );

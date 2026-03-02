@@ -19,22 +19,22 @@ Markdown レンダリング、シンタックスハイライト、UX 改善。
 
 ### Markdown レンダリング
 
-- [ ] `marked` パッケージを devDependencies に追加
-- [ ] エージェントのメッセージを `marked.parse()` で HTML に変換して表示
-- [ ] CSP に `style-src 'unsafe-inline'` を追加するか、marked の出力に対応する CSS を用意
+- [x] `marked` パッケージを devDependencies に追加
+- [x] エージェントのメッセージを `marked.parse()` で HTML に変換して表示
+- [x] CSP に `style-src 'unsafe-inline'` を追加するか、marked の出力に対応する CSS を用意
 
 ### シンタックスハイライト
 
-- [ ] `highlight.js` パッケージを devDependencies に追加
-- [ ] `marked` の renderer をカスタマイズし、コードブロックに `hljs.highlight()` を適用
-- [ ] highlight.js の CSS テーマを VSCode テーマに合わせて選択（ダーク/ライト）
+- [x] `highlight.js` パッケージを devDependencies に追加
+- [x] `marked` の renderer をカスタマイズし、コードブロックに `hljs.highlight()` を適用
+- [x] highlight.js の CSS テーマを VSCode テーマに合わせて選択（ダーク/ライト）
 
 ### UX 改善
 
 - [x] 送信中のローディング表示（スピナー or 「考え中...」表示）
 - [x] エラーメッセージの視覚的な表示（赤背景 or アイコン付き）
 - [x] 自動スクロール — 新メッセージ追加時にメッセージエリアの最下部にスクロール
-- [ ] 送信中は入力欄を無効化、TurnEnd で再有効化
+- [x] 送信中は入力欄を無効化、TurnEnd で再有効化
 - [x] 空メッセージの送信防止
 
 ## 設計方針
