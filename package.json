@@ -1,0 +1,70 @@
+{
+  "name": "kiro-acp-dev",
+  "displayName": "Kiro ACP",
+  "description": "Kiro AI agent chat panel for VSCode via ACP",
+  "version": "0.1.0",
+  "publisher": "m4i",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["AI", "Chat"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kiro-acp",
+          "title": "Kiro",
+          "icon": "media/kiro-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "kiro-acp": [
+        {
+          "type": "webview",
+          "id": "kiro-acp.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "kiro-acp.newSession",
+        "title": "Kiro: New Chat Session"
+      },
+      {
+        "command": "kiro-acp.cancelRequest",
+        "title": "Kiro: Cancel Current Request"
+      }
+    ],
+    "configuration": {
+      "title": "Kiro ACP",
+      "properties": {
+        "kiro-acp.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "kiro-cli の絶対パス（空の場合は PATH から検索）"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "pnpm run check-types && node esbuild.mjs",
+    "check-types": "tsc --noEmit",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.mjs --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "vscode:prepublish": "pnpm run package",
+    "package": "pnpm run check-types && node esbuild.mjs --production"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.25.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.0"
+  }
+}
