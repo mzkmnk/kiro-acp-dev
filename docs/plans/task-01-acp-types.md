@@ -15,44 +15,44 @@ ACP（Agent Client Protocol）の JSON-RPC 2.0 通信で使用するすべての
 
 ## TODO
 
-- [ ] JSON-RPC 2.0 基本型
+- [x] JSON-RPC 2.0 基本型
   - `JsonRpcRequest` — `{ jsonrpc: "2.0", id: number, method: string, params?: unknown }`
   - `JsonRpcResponse` — `{ jsonrpc: "2.0", id: number, result?: unknown, error?: JsonRpcError }`
   - `JsonRpcNotification` — `{ jsonrpc: "2.0", method: string, params?: unknown }`（id なし）
   - `JsonRpcError` — `{ code: number, message: string, data?: unknown }`
-- [ ] `initialize` 型
+- [x] `initialize` 型
   - `InitializeParams` — `{ protocolVersion: 1, clientCapabilities, clientInfo }`
   - `ClientCapabilities` — `{ fs: { readTextFile: boolean, writeTextFile: boolean }, terminal: boolean }`
   - `ClientInfo` — `{ name: "kiro-acp-dev", title: "Kiro ACP Dev", version: "0.1.0" }`
   - `InitializeResult` — `{ protocolVersion, agentCapabilities, agentInfo }`
   - `AgentCapabilities` — `{ loadSession: boolean, promptCapabilities: { image: boolean } }`
   - `AgentInfo` — `{ name: string, version: string }`
-- [ ] `session/new` 型
+- [x] `session/new` 型
   - `SessionNewParams` — `{ cwd: string, mcpServers: McpServerConfig[] }`
   - `SessionNewResult` — `{ sessionId: string }`
-- [ ] `session/load` 型
+- [x] `session/load` 型
   - `SessionLoadParams` — `{ sessionId: string }`
-- [ ] `session/prompt` 型
+- [x] `session/prompt` 型
   - `SessionPromptParams` — `{ sessionId: string, content: PromptContent[] }`
   - `PromptContent` — `TextContent | ImageContent | ResourceLinkContent`
   - `TextContent` — `{ type: "text", text: string }`
   - `ImageContent` — `{ type: "image", ... }`
   - `ResourceLinkContent` — `{ type: "resource_link", ... }`
-- [ ] `session/cancel` 型（Notification、id なし）
+- [x] `session/cancel` 型（Notification、id なし）
   - `SessionCancelParams` — `{ sessionId: string }`
-- [ ] `session/update` 型（Agent → Client Notification）
+- [x] `session/update` 型（Agent → Client Notification）
   - `SessionUpdateParams` — 以下の union 型
   - `AgentMessageChunk` — ストリーミングテキスト/コンテンツ
   - `ToolCall` — ツール呼び出し（name, parameters, status）
   - `ToolCallUpdate` — 実行中ツールの進捗
   - `TurnEnd` — ターン完了シグナル
-- [ ] Agent → Client リクエスト型
+- [x] Agent → Client リクエスト型
   - `FsReadTextFileParams` — `{ path: string }`（絶対パス）
   - `FsWriteTextFileParams` — `{ path: string, content: string }`（絶対パス）
   - `SessionRequestPermissionParams` — ツール呼び出し承認要求
   - `TerminalCreateParams`, `TerminalOutputParams`, `TerminalWaitForExitParams`, `TerminalReleaseParams`, `TerminalKillParams`
-- [ ] `session/set_mode`, `session/set_model` パラメータ型
-- [ ] Kiro 独自拡張メソッド型（`_kiro.dev/` プレフィックス）
+- [x] `session/set_mode`, `session/set_model` パラメータ型
+- [x] Kiro 独自拡張メソッド型（`_kiro.dev/` プレフィックス）
   - `_kiro.dev/commands/execute` (Request), `_kiro.dev/commands/options` (Request), `_kiro.dev/commands/available` (Notification)
   - `_kiro.dev/mcp/oauth_request` (Notification), `_kiro.dev/mcp/server_initialized` (Notification)
   - `_kiro.dev/compaction/status` (Notification), `_kiro.dev/clear/status` (Notification)
