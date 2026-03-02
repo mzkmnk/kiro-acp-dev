@@ -102,7 +102,9 @@ export class AcpClient {
   }) {
     this.outputChannel = options?.outputChannel ?? vscode.window.createOutputChannel('Kiro ACP');
     this.requestTimeoutMs = options?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-    this.traceRpc = options?.traceRpc ?? vscode.workspace.getConfiguration('kiro-acp').get<boolean>('traceRpc', false);
+    this.traceRpc =
+      options?.traceRpc ??
+      vscode.workspace.getConfiguration('kiro-acp').get<boolean>('traceRpc', false);
   }
 
   /**

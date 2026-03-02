@@ -265,7 +265,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview.js'),
     );
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'style.css'));
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'dist', 'style.css'),
+    );
 
     return `<!DOCTYPE html>
 <html lang="en">
