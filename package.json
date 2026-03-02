@@ -54,6 +54,9 @@
   "scripts": {
     "compile": "pnpm run check-types && node esbuild.mjs",
     "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.mjs --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
@@ -61,10 +64,15 @@
     "package": "pnpm run check-types && node esbuild.mjs --production"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
     "@types/node": "^20.0.0",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "eslint": "latest",
+    "eslint-config-prettier": "latest",
     "esbuild": "^0.25.0",
     "npm-run-all": "^4.1.5",
+    "prettier": "latest",
     "typescript": "^5.7.0"
   }
 }
