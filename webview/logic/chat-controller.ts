@@ -98,6 +98,31 @@ export class ChatController {
   }
 
   /**
+   * Sends the permission decision for the currently shown request.
+   * 表示中の権限リクエストに対する決定を送信します。
+   *
+   * @param requestId - Permission request identifier.
+   *                    権限リクエストの識別子。
+   * @param optionId - Selected permission option ID.
+   *                   選択した権限オプション ID。
+   */
+  public respondPermission(requestId: number, optionId: string): void {
+    const target = this.state.items.find(
+      (item) => item.role === 'permission' && item.permissionRequestId === requestId && !item.resolved,
+    );
+    if (!target) {
+      return;
+    }
+
+    this.vscode.postMessage({ type: 'permissionResponse', id: requestId, optionId });
+    this.setState({
+      items: this.state.items.map((item) =>
+        item.id === target.id ? { ...item, resolved: true, text: `${item.text}\nSelected: ${optionId}` } : item,
+      ),
+    });
+  }
+
+  /**
    * Removes a queued prompt without sending it.
    * キュー済みプロンプトを送信せずに削除します。
    *
@@ -156,17 +181,20 @@ export class ChatController {
         this.queueAgentChunk(message.text);
         return;
       case 'toolCall':
-        this.pushItem({
-          id: this.createId(),
-          role: 'system',
-          text: `Tool: ${message.name} (${message.status})`,
-        });
+        this.upsertToolCall(message.toolCallId, message.name, message.status, message.content);
         return;
       case 'toolCallUpdate':
+        this.upsertToolCall(message.toolCallId, message.name, message.status, message.content);
+        return;
+      case 'requestPermission':
         this.pushItem({
           id: this.createId(),
-          role: 'system',
-          text: `${message.name}: ${message.content}`,
+          role: 'permission',
+          text: message.params,
+          toolName: message.toolName,
+          permissionRequestId: message.id,
+          permissionOptions: message.options,
+          resolved: false,
         });
         return;
       case 'turnEnd':
@@ -242,6 +270,35 @@ export class ChatController {
     this.inFlightTurns += 1;
     this.setState({ streaming: true });
     this.vscode.postMessage({ type: 'prompt', text });
+  }
+
+  private upsertToolCall(toolCallId: string, name: string, status: string, content: string): void {
+    const normalizedStatus = status === 'in_progress' ? 'running' : status;
+    const existingIndex = this.state.items.findIndex(
+      (item) => item.role === 'tool' && item.toolCallId === toolCallId,
+    );
+
+    if (existingIndex < 0) {
+      this.pushItem({
+        id: this.createId(),
+        role: 'tool',
+        text: content,
+        toolCallId,
+        toolStatus: normalizedStatus,
+        toolName: name,
+      });
+      return;
+    }
+
+    const nextItems = [...this.state.items];
+    const existing = nextItems[existingIndex];
+    nextItems[existingIndex] = {
+      ...existing,
+      text: content || existing.text,
+      toolName: name || existing.toolName,
+      toolStatus: normalizedStatus || existing.toolStatus,
+    };
+    this.setState({ items: nextItems });
   }
 
   private flushQueueIfIdle(): void {

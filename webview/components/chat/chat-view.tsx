@@ -63,6 +63,7 @@ export interface ChatViewProps {
   onNewSession: () => void;
   onSendQueuedNow: (queuedPromptId: string) => void;
   onRemoveQueued: (queuedPromptId: string) => void;
+  onPermissionResponse: (requestId: number, optionId: string) => void;
 }
 
 export function ChatView({
@@ -74,6 +75,7 @@ export function ChatView({
   onNewSession,
   onSendQueuedNow,
   onRemoveQueued,
+  onPermissionResponse,
 }: ChatViewProps): React.JSX.Element {
   const [prompt, setPrompt] = React.useState('');
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -119,7 +121,7 @@ export function ChatView({
       <div ref={scrollRef} className="h-[calc(100%-132px)] overflow-y-auto px-3 py-3">
         <div className="space-y-2.5">
           {items.map((item) => (
-            <MessageRow key={item.id} item={item} />
+            <MessageRow key={item.id} item={item} onPermissionResponse={onPermissionResponse} />
           ))}
         </div>
 
@@ -229,9 +231,22 @@ export function ChatView({
   );
 }
 
-function MessageRow({ item }: { item: ChatItem }): React.JSX.Element {
+function MessageRow({
+  item,
+  onPermissionResponse,
+}: {
+  item: ChatItem;
+  onPermissionResponse: (requestId: number, optionId: string) => void;
+}): React.JSX.Element {
   const isUser = item.role === 'user';
-  const isMeta = item.role === 'system' || item.role === 'error';
+  const isMeta =
+    item.role === 'system' || item.role === 'error' || item.role === 'tool' || item.role === 'permission';
+  if (item.role === 'tool') {
+    return <ToolCallRow item={item} />;
+  }
+  if (item.role === 'permission') {
+    return <PermissionRow item={item} onPermissionResponse={onPermissionResponse} />;
+  }
 
   return (
     <article className={`flex w-full gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -260,6 +275,73 @@ function MessageRow({ item }: { item: ChatItem }): React.JSX.Element {
           item.text
         )}
       </div>
+    </article>
+  );
+}
+
+function ToolCallRow({ item }: { item: ChatItem }): React.JSX.Element {
+  const status = item.toolStatus ?? 'pending';
+  const badgeColor =
+    status === 'completed'
+      ? 'bg-emerald-600/20 text-emerald-300'
+      : status === 'failed'
+        ? 'bg-red-600/20 text-red-300'
+        : status === 'running'
+          ? 'bg-sky-600/20 text-sky-300'
+          : 'bg-amber-600/20 text-amber-300';
+
+  return (
+    <article className="flex w-full justify-start">
+      <details className="w-[88%] rounded-xl border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_86%,white_4%)] px-3 py-2 text-[12px] leading-relaxed text-(--vscode-descriptionForeground)">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+          <span className="font-medium text-(--vscode-editor-foreground)">{item.toolName}</span>
+          <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${badgeColor}`}>
+            {status}
+          </span>
+        </summary>
+        {item.text ? <pre className="mt-2 overflow-x-auto whitespace-pre-wrap">{item.text}</pre> : null}
+      </details>
+    </article>
+  );
+}
+
+function PermissionRow({
+  item,
+  onPermissionResponse,
+}: {
+  item: ChatItem;
+  onPermissionResponse: (requestId: number, optionId: string) => void;
+}): React.JSX.Element {
+  return (
+    <article className="flex w-full justify-start">
+      <section className="w-[88%] rounded-xl border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_86%,white_4%)] px-3 py-2 text-[12px]">
+        <h3 className="text-xs font-semibold text-(--vscode-editor-foreground)">
+          Permission required: {item.toolName}
+        </h3>
+        <pre className="mt-2 max-h-56 overflow-auto rounded border border-(--vscode-panel-border) p-2 text-[11px] whitespace-pre-wrap">
+          {item.text}
+        </pre>
+        {item.resolved ? (
+          <p className="mt-2 text-[11px] text-(--vscode-descriptionForeground)">Resolved</p>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(item.permissionOptions ?? []).map((option) => (
+              <button
+                key={option.optionId}
+                type="button"
+                onClick={() => {
+                  if (item.permissionRequestId !== undefined) {
+                    onPermissionResponse(item.permissionRequestId, option.optionId);
+                  }
+                }}
+                className="rounded border border-(--vscode-panel-border) px-2 py-1 text-[11px] hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)]"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
     </article>
   );
 }

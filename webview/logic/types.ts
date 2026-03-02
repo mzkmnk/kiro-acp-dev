@@ -1,22 +1,36 @@
 export type WebviewToExtensionMessage =
   | { type: 'prompt'; text: string }
   | { type: 'cancel' }
-  | { type: 'newSession' };
+  | { type: 'newSession' }
+  | { type: 'permissionResponse'; id: number; optionId: string };
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
-  | { type: 'toolCall'; name: string; status: string }
-  | { type: 'toolCallUpdate'; name: string; content: string }
+  | { type: 'toolCall'; toolCallId: string; name: string; status: string; content: string }
+  | { type: 'toolCallUpdate'; toolCallId: string; name: string; status: string; content: string }
+  | {
+      type: 'requestPermission';
+      id: number;
+      toolName: string;
+      params: string;
+      options: Array<{ optionId: string; label: string }>;
+    }
   | { type: 'turnEnd' }
   | { type: 'error'; message: string }
   | { type: 'ready'; agentInfo: { name: string; version: string } };
 
-export type ChatRole = 'user' | 'agent' | 'system' | 'error';
+export type ChatRole = 'user' | 'agent' | 'system' | 'error' | 'tool' | 'permission';
 
 export interface ChatItem {
   id: string;
   role: ChatRole;
   text: string;
+  toolCallId?: string;
+  toolStatus?: string;
+  toolName?: string;
+  permissionRequestId?: number;
+  permissionOptions?: Array<{ optionId: string; label: string }>;
+  resolved?: boolean;
 }
 
 export interface QueuedPrompt {
