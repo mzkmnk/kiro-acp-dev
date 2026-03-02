@@ -21,3 +21,80 @@ body {
   color: var(--vscode-editor-foreground);
   background: var(--vscode-sideBar-background);
 }
+
+.markdown-body {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body p {
+  margin: 0.25rem 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.3rem 0 0.3rem 1rem;
+  padding: 0;
+}
+
+.markdown-body code {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.95em;
+}
+
+.markdown-body :not(pre) > code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--vscode-editor-background) 85%, black 15%);
+}
+
+.markdown-body pre {
+  margin: 0.35rem 0;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.hljs {
+  display: block;
+  padding: 0.7rem;
+  color: var(--vscode-editor-foreground);
+  background: color-mix(in srgb, var(--vscode-editor-background) 90%, black 10%);
+}
+
+.vscode-light .hljs {
+  background: color-mix(in srgb, var(--vscode-editor-background) 85%, black 8%);
+}
+
+.vscode-dark .hljs,
+.vscode-high-contrast .hljs {
+  background: color-mix(in srgb, var(--vscode-editor-background) 82%, black 18%);
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-link {
+  color: var(--vscode-symbolIcon-keywordForeground);
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-name,
+.hljs-type,
+.hljs-attribute {
+  color: var(--vscode-symbolIcon-stringForeground);
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-variable,
+.hljs-template-variable {
+  color: var(--vscode-symbolIcon-numberForeground);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--vscode-descriptionForeground);
+}
