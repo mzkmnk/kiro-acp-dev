@@ -3,5 +3,4 @@ out
 .vscode
 *.vsix
 
-webview/components/**
 pnpm-lock.yaml
