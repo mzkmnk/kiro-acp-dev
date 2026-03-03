@@ -311,10 +311,10 @@ export function ChatView({
             <div className="flex items-center gap-2 text-[12px] text-(--vscode-descriptionForeground)">
               <button
                 type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_72%,#c5cad7_28%)]"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_72%,#c5cad7_28%)]"
                 title="Add context"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>
               {configOptions
                 .filter((opt) => opt.category === 'model' || opt.category === 'mode')
@@ -344,12 +344,12 @@ export function ChatView({
                     ? 'Queue prompt'
                     : 'Send prompt'
               }
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--vscode-panel-border)_70%,#a5aabd_30%)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_65%,#9ea4b8_35%)] text-(--vscode-editor-foreground) disabled:opacity-50"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--vscode-panel-border)_70%,#a5aabd_30%)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_65%,#9ea4b8_35%)] text-(--vscode-editor-foreground) disabled:opacity-50"
             >
               {streaming && !prompt.trim() ? (
-                <Square className="h-4 w-4" />
+                <Square className="h-3.5 w-3.5" strokeWidth={1.5} />
               ) : (
-                <ArrowUp className="h-4 w-4" />
+                <ArrowUp className="h-3.5 w-3.5" strokeWidth={1.5} />
               )}
             </button>
           </div>
