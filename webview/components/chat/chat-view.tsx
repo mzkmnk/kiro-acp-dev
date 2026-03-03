@@ -232,8 +232,7 @@ export function ChatView({
                 ))}
               {configOptions.filter((opt) => opt.category === 'model').length === 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full px-2 py-1">
-                  auto
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 </span>
               ) : null}
             </div>
@@ -451,7 +450,7 @@ function ModelSelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)]"
+        className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1"
       >
         {currentLabel}
         <ChevronDown className="h-3.5 w-3.5" />

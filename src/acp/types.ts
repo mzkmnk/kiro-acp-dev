@@ -420,6 +420,14 @@ export interface ConfigOption {
 
 export interface SessionNewResultWithConfig extends SessionNewResult {
   configOptions?: ConfigOption[];
+  modes?: {
+    currentModeId: string;
+    availableModes: Array<{ id: string; name: string; description?: string }>;
+  };
+  models?: {
+    currentModelId: string;
+    availableModels: Array<{ modelId: string; name: string; description?: string }>;
+  };
 }
 
 export interface SessionSetConfigOptionParams {

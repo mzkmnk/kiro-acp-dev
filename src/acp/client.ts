@@ -22,10 +22,12 @@ import type {
   PromptContent,
   SessionCancelParams,
   SessionNewParams,
-  SessionNewResult,
+  SessionNewResultWithConfig,
   SessionPromptParams,
   SessionSetConfigOptionParams,
   SessionSetConfigOptionResult,
+  SessionSetModelParams,
+  SessionSetModeParams,
   SessionUpdateParams,
 } from './types';
 
@@ -171,9 +173,9 @@ export class AcpClient {
    * @returns Session creation result containing the session ID.
    *          セッション ID を含む作成結果。
    */
-  public async newSession(cwd: string): Promise<SessionNewResult> {
+  public async newSession(cwd: string): Promise<SessionNewResultWithConfig> {
     const params: SessionNewParams = { cwd, mcpServers: [] };
-    return this.sendRequest<SessionNewResult>('session/new', params);
+    return this.sendRequest<SessionNewResultWithConfig>('session/new', params);
   }
 
   /**
@@ -224,6 +226,34 @@ export class AcpClient {
   ): Promise<SessionSetConfigOptionResult> {
     const params: SessionSetConfigOptionParams = { sessionId, configId, value };
     return this.sendRequest<SessionSetConfigOptionResult>('session/set_config_option', params);
+  }
+
+  /**
+   * Changes the model for a session (legacy API).
+   * セッションのモデルを変更します（レガシー API）。
+   *
+   * @param sessionId - Target ACP session ID.
+   *                    対象の ACP セッション ID。
+   * @param modelId - New model identifier.
+   *                  新しいモデルの識別子。
+   */
+  public async setModel(sessionId: string, modelId: string): Promise<void> {
+    const params: SessionSetModelParams = { sessionId, modelId };
+    await this.sendRequest('session/set_model', params);
+  }
+
+  /**
+   * Changes the mode for a session (legacy API).
+   * セッションのモードを変更します（レガシー API）。
+   *
+   * @param sessionId - Target ACP session ID.
+   *                    対象の ACP セッション ID。
+   * @param modeId - New mode identifier.
+   *                 新しいモードの識別子。
+   */
+  public async setMode(sessionId: string, modeId: string): Promise<void> {
+    const params: SessionSetModeParams = { sessionId, modeId };
+    await this.sendRequest('session/set_mode', params);
   }
 
   /**

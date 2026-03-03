@@ -195,13 +195,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
           if (!this.sessionId) {
             return;
           }
-          const result = await this.acpClient.setConfigOption(
-            this.sessionId,
-            message.configId,
-            message.value,
-          );
-          this.configOptions = result.configOptions;
-          await this.postConfigOptions();
+          await this.applyConfigOption(this.sessionId, message.configId, message.value);
           return;
         }
       }
@@ -217,6 +211,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       agentInfo: initializeResult.agentInfo,
     });
     await this.ensureSession();
+    if (this.configOptions.length > 0) {
+      await this.postConfigOptions();
+    }
   }
 
   private async ensureStarted(): Promise<InitializeResult> {
@@ -256,9 +253,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       const result = await this.acpClient.newSession(this.workspacePath);
       this.sessionId = result.sessionId;
 
-      const resultWithConfig = result as { configOptions?: ConfigOption[] };
-      if (resultWithConfig.configOptions) {
-        this.configOptions = resultWithConfig.configOptions;
+      if (result.configOptions) {
+        this.configOptions = result.configOptions;
+      } else {
+        this.configOptions = this.buildConfigOptionsFromResult(result);
+      }
+
+      if (this.configOptions.length > 0) {
         await this.postConfigOptions();
       }
 
@@ -460,6 +461,83 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       default:
         return kind;
     }
+  }
+
+  /**
+   * Applies a config option change via the appropriate ACP API and updates local state.
+   * 適切な ACP API を使って設定オプションの変更を適用し、ローカル状態を更新します。
+   *
+   * @param sessionId - Target ACP session ID.
+   *                    対象の ACP セッション ID。
+   * @param configId - Config option identifier (e.g. 'model', 'mode').
+   *                   設定オプションの識別子。
+   * @param value - New value.
+   *               新しい値。
+   */
+  private async applyConfigOption(
+    sessionId: string,
+    configId: string,
+    value: string,
+  ): Promise<void> {
+    if (configId === 'model') {
+      await this.acpClient.setModel(sessionId, value);
+    } else if (configId === 'mode') {
+      await this.acpClient.setMode(sessionId, value);
+    } else {
+      const result = await this.acpClient.setConfigOption(sessionId, configId, value);
+      this.configOptions = result.configOptions;
+      await this.postConfigOptions();
+      return;
+    }
+
+    this.configOptions = this.configOptions.map((opt) =>
+      opt.id === configId ? { ...opt, currentValue: value } : opt,
+    );
+    await this.postConfigOptions();
+  }
+
+  /**
+   * Builds ConfigOption[] from legacy modes/models fields in session/new response.
+   * session/new レスポンスのレガシー modes/models フィールドから ConfigOption[] を構築します。
+   */
+  private buildConfigOptionsFromResult(result: {
+    modes?: { currentModeId: string; availableModes: Array<{ id: string; name: string }> };
+    models?: {
+      currentModelId: string;
+      availableModels: Array<{ modelId: string; name: string }>;
+    };
+  }): ConfigOption[] {
+    const options: ConfigOption[] = [];
+
+    if (result.models) {
+      options.push({
+        id: 'model',
+        name: 'Model',
+        category: 'model',
+        type: 'select',
+        currentValue: result.models.currentModelId,
+        options: result.models.availableModels.map((m) => ({
+          value: m.modelId,
+          name: m.name,
+        })),
+      });
+    }
+
+    if (result.modes) {
+      options.push({
+        id: 'mode',
+        name: 'Mode',
+        category: 'mode',
+        type: 'select',
+        currentValue: result.modes.currentModeId,
+        options: result.modes.availableModes.map((m) => ({
+          value: m.id,
+          name: m.name,
+        })),
+      });
+    }
+
+    return options;
   }
 
   private async postConfigOptions(): Promise<void> {
