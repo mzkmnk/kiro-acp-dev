@@ -1,7 +1,8 @@
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { access } from 'node:fs/promises';
+import { access, writeFile, readFile, unlink } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import * as vscode from 'vscode';
 
 import { classifyJsonRpcMessage } from './client-core/classify-json-rpc-message';
@@ -168,7 +169,7 @@ export class AcpClient {
       };
 
       proc.once('exit', onExit);
-      proc.kill('SIGTERM');
+      this.killProcessTree(proc.pid);
 
       setTimeout(() => {
         if (!proc.killed) {
@@ -176,6 +177,8 @@ export class AcpClient {
         }
       }, PROCESS_SHUTDOWN_GRACE_MS);
     });
+
+    await this.removePidFile();
   }
 
   /**
@@ -397,6 +400,71 @@ export class AcpClient {
   }
 
   /**
+   * Kills the process tree rooted at the given PID using SIGTERM.
+   * 指定 PID をルートとするプロセスツリーを SIGTERM で終了します。
+   *
+   * @param pid - Root process ID.
+   *              ルートプロセス ID。
+   */
+  private killProcessTree(pid: number | undefined): void {
+    if (pid === undefined) {
+      return;
+    }
+    // Kill child processes first, then the parent.
+    try {
+      spawnSync('pkill', ['-P', String(pid)]);
+    } catch {
+      // pkill may fail if no children exist.
+    }
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      // Process already exited.
+    }
+  }
+
+  private get pidFilePath(): string {
+    return join(homedir(), '.kiro', 'kiro-acp-dev.pid');
+  }
+
+  private async writePidFile(pid: number | undefined): Promise<void> {
+    if (pid === undefined) {
+      return;
+    }
+    try {
+      await writeFile(this.pidFilePath, String(pid), 'utf-8');
+    } catch {
+      // Non-critical.
+    }
+  }
+
+  private async removePidFile(): Promise<void> {
+    try {
+      await unlink(this.pidFilePath);
+    } catch {
+      // File may not exist.
+    }
+  }
+
+  /**
+   * Kills any leftover ACP process from a previous extension session.
+   * 前回の拡張機能セッションから残った ACP プロセスを終了します。
+   */
+  public async cleanupStaleProcess(): Promise<void> {
+    try {
+      const raw = await readFile(this.pidFilePath, 'utf-8');
+      const pid = Number(raw.trim());
+      if (!Number.isNaN(pid) && pid > 0) {
+        this.killProcessTree(pid);
+        this.outputChannel.appendLine(`Cleaned up stale ACP process (PID=${pid}).`);
+      }
+    } catch {
+      // No PID file or already cleaned up.
+    }
+    await this.removePidFile();
+  }
+
+  /**
    * Spawns the ACP child process and wires process event handlers.
    * ACP 子プロセスを起動し、各種プロセスイベントハンドラを設定します。
    */
@@ -412,6 +480,8 @@ export class AcpClient {
       cwd: this.cwd,
     });
     this.stdoutBuffer = '';
+
+    void this.writePidFile(this.process.pid);
 
     this.process.stdout.on('data', (chunk: Buffer) => {
       this.handleStdoutData(chunk.toString('utf8'));
