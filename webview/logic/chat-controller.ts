@@ -282,6 +282,18 @@ export class ChatController {
       case 'configOptions':
         this.setState({ configOptions: message.options });
         return;
+      case 'sessionStatus':
+        this.pushItem({
+          id: this.createId(),
+          role: 'system',
+          text: message.message,
+        });
+        if (message.status === 'terminated') {
+          this.activeAgentMessageId = undefined;
+          this.inFlightTurns = 0;
+          this.setState({ streaming: false });
+        }
+        return;
     }
   }
 

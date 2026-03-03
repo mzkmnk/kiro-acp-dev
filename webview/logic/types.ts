@@ -37,7 +37,8 @@ export type ExtensionToWebviewMessage =
   | {
       type: 'configOptions';
       options: ConfigOptionState[];
-    };
+    }
+  | { type: 'sessionStatus'; status: string; message: string };
 
 export type ChatRole = 'user' | 'agent' | 'system' | 'error' | 'tool' | 'permission';
 

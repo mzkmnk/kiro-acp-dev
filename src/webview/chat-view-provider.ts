@@ -57,7 +57,8 @@ export type ExtensionToWebviewMessage =
         currentValue: string;
         values: Array<{ value: string; name: string }>;
       }>;
-    };
+    }
+  | { type: 'sessionStatus'; status: string; message: string };
 
 /**
  * Provides and bridges the chat webview with ACP session APIs.
@@ -65,6 +66,8 @@ export type ExtensionToWebviewMessage =
  */
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'kiro-acp.chatView';
+
+  private static readonly SESSION_ID_KEY = 'kiro-acp.lastSessionId';
 
   private view?: vscode.WebviewView;
   private sessionId?: string;
@@ -79,10 +82,40 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     private readonly extensionUri: vscode.Uri,
     private readonly acpClient: AcpClient,
     private readonly workspacePath: string,
+    private readonly context: vscode.ExtensionContext,
   ) {
     this.disposables = [
       this.acpClient.onUpdate((params) => {
         void this.handleSessionUpdate(params);
+      }),
+      this.acpClient.onCompactionStatus((params) => {
+        if (this.sessionId && params.sessionId === this.sessionId) {
+          void this.postMessage({
+            type: 'sessionStatus',
+            status: 'compacting',
+            message: params.status,
+          });
+        }
+      }),
+      this.acpClient.onClearStatus((params) => {
+        if (this.sessionId && params.sessionId === this.sessionId) {
+          void this.postMessage({
+            type: 'sessionStatus',
+            status: 'clearing',
+            message: params.status,
+          });
+        }
+      }),
+      this.acpClient.onTerminate((params) => {
+        if (this.sessionId && params.sessionId === this.sessionId) {
+          this.sessionId = undefined;
+          this.persistSessionId(undefined);
+          void this.postMessage({
+            type: 'sessionStatus',
+            status: 'terminated',
+            message: 'Session terminated',
+          });
+        }
       }),
     ];
 
@@ -123,6 +156,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
    */
   public async createNewSession(): Promise<void> {
     try {
+      this.sessionId = undefined;
+      this.persistSessionId(undefined);
       this.sessionId = await this.createSession();
     } catch (error) {
       await this.postError(error);
@@ -240,6 +275,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       return this.sessionId;
     }
 
+    const savedId = this.context.workspaceState.get<string>(ChatViewProvider.SESSION_ID_KEY);
+    if (savedId) {
+      try {
+        return await this.loadSession(savedId);
+      } catch {
+        // Saved session is no longer valid; create a new one.
+        this.persistSessionId(undefined);
+      }
+    }
+
     return this.createSession();
   }
 
@@ -252,6 +297,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.ensureStarted();
       const result = await this.acpClient.newSession(this.workspacePath);
       this.sessionId = result.sessionId;
+      this.persistSessionId(result.sessionId);
 
       if (result.configOptions) {
         this.configOptions = result.configOptions;
@@ -271,6 +317,45 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     } finally {
       this.sessionPromise = undefined;
     }
+  }
+
+  /**
+   * Loads an existing ACP session by ID and restores config options.
+   * 既存の ACP セッションを ID で読み込み、設定オプションを復元します。
+   *
+   * @param sessionId - Session ID to load.
+   *                    読み込むセッション ID。
+   * @returns The loaded session ID.
+   *          読み込まれたセッション ID。
+   */
+  private async loadSession(sessionId: string): Promise<string> {
+    await this.ensureStarted();
+    const result = await this.acpClient.loadSession(sessionId, this.workspacePath);
+    this.sessionId = result.sessionId;
+    this.persistSessionId(result.sessionId);
+
+    if (result.configOptions) {
+      this.configOptions = result.configOptions;
+    } else {
+      this.configOptions = this.buildConfigOptionsFromResult(result);
+    }
+
+    if (this.configOptions.length > 0) {
+      await this.postConfigOptions();
+    }
+
+    return result.sessionId;
+  }
+
+  /**
+   * Persists or clears the session ID in workspace state.
+   * ワークスペース状態にセッション ID を保存またはクリアします。
+   *
+   * @param sessionId - Session ID to persist, or undefined to clear.
+   *                    保存するセッション ID。undefined でクリア。
+   */
+  private persistSessionId(sessionId: string | undefined): void {
+    void this.context.workspaceState.update(ChatViewProvider.SESSION_ID_KEY, sessionId);
   }
 
   private async handleSessionUpdate(params: SessionUpdateParams): Promise<void> {

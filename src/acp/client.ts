@@ -19,8 +19,11 @@ import type {
   JsonRpcNotification,
   JsonRpcRequest,
   JsonRpcResponse,
+  KiroClearStatusParams,
+  KiroCompactionStatusParams,
   PromptContent,
   SessionCancelParams,
+  SessionLoadParams,
   SessionNewParams,
   SessionNewResultWithConfig,
   SessionPromptParams,
@@ -28,6 +31,7 @@ import type {
   SessionSetConfigOptionResult,
   SessionSetModelParams,
   SessionSetModeParams,
+  SessionTerminateParams,
   SessionUpdateParams,
 } from './types';
 
@@ -80,6 +84,12 @@ export class AcpClient {
   private readonly handlers = new Map<string, RequestHandler>();
   /** Emitter for `session/update` notifications. / `session/update` 通知のイベントエミッタ。 */
   private readonly updateEmitter = new vscode.EventEmitter<SessionUpdateParams>();
+  /** Emitter for `_kiro.dev/compaction/status` notifications. / `_kiro.dev/compaction/status` 通知のイベントエミッタ。 */
+  private readonly compactionStatusEmitter = new vscode.EventEmitter<KiroCompactionStatusParams>();
+  /** Emitter for `_kiro.dev/clear/status` notifications. / `_kiro.dev/clear/status` 通知のイベントエミッタ。 */
+  private readonly clearStatusEmitter = new vscode.EventEmitter<KiroClearStatusParams>();
+  /** Emitter for `_session/terminate` notifications. / `_session/terminate` 通知のイベントエミッタ。 */
+  private readonly terminateEmitter = new vscode.EventEmitter<SessionTerminateParams>();
 
   /** Incremental stdout buffer for NDJSON framing. / NDJSON 分割用の stdout バッファ。 */
   private stdoutBuffer = '';
@@ -179,6 +189,22 @@ export class AcpClient {
   }
 
   /**
+   * Loads an existing ACP session by ID.
+   * 既存の ACP セッションを ID で読み込みます。
+   *
+   * @param sessionId - Session ID to load.
+   *                    読み込むセッション ID。
+   * @param cwd - Working directory path.
+   *              作業ディレクトリのパス。
+   * @returns Session result containing the session ID.
+   *          セッション ID を含む結果。
+   */
+  public async loadSession(sessionId: string, cwd: string): Promise<SessionNewResultWithConfig> {
+    const params: SessionLoadParams = { sessionId, cwd, mcpServers: [] };
+    return this.sendRequest<SessionNewResultWithConfig>('session/load', params);
+  }
+
+  /**
    * Sends a prompt to an existing ACP session.
    * 既存の ACP セッションへプロンプトを送信します。
    *
@@ -267,6 +293,47 @@ export class AcpClient {
    */
   public onUpdate(callback: (params: SessionUpdateParams) => void): vscode.Disposable {
     return this.updateEmitter.event(callback);
+  }
+
+  /**
+   * Subscribes to `_kiro.dev/compaction/status` notifications.
+   * `_kiro.dev/compaction/status` 通知を購読します。
+   *
+   * @param callback - Callback invoked for each compaction status update.
+   *                   コンパクション状態更新時に呼び出されるコールバック。
+   * @returns Disposable subscription handle.
+   *          購読解除に使う Disposable ハンドル。
+   */
+  public onCompactionStatus(
+    callback: (params: KiroCompactionStatusParams) => void,
+  ): vscode.Disposable {
+    return this.compactionStatusEmitter.event(callback);
+  }
+
+  /**
+   * Subscribes to `_kiro.dev/clear/status` notifications.
+   * `_kiro.dev/clear/status` 通知を購読します。
+   *
+   * @param callback - Callback invoked for each clear status update.
+   *                   クリア状態更新時に呼び出されるコールバック。
+   * @returns Disposable subscription handle.
+   *          購読解除に使う Disposable ハンドル。
+   */
+  public onClearStatus(callback: (params: KiroClearStatusParams) => void): vscode.Disposable {
+    return this.clearStatusEmitter.event(callback);
+  }
+
+  /**
+   * Subscribes to `_session/terminate` notifications.
+   * `_session/terminate` 通知を購読します。
+   *
+   * @param callback - Callback invoked when a session is terminated.
+   *                   セッション終了時に呼び出されるコールバック。
+   * @returns Disposable subscription handle.
+   *          購読解除に使う Disposable ハンドル。
+   */
+  public onTerminate(callback: (params: SessionTerminateParams) => void): vscode.Disposable {
+    return this.terminateEmitter.event(callback);
   }
 
   /**
@@ -495,8 +562,19 @@ export class AcpClient {
    *                       受信した通知ペイロード。
    */
   private handleIncomingNotification(notification: JsonRpcNotification): void {
-    if (notification.method === 'session/update') {
-      this.updateEmitter.fire(notification.params as SessionUpdateParams);
+    switch (notification.method) {
+      case 'session/update':
+        this.updateEmitter.fire(notification.params as SessionUpdateParams);
+        return;
+      case '_kiro.dev/compaction/status':
+        this.compactionStatusEmitter.fire(notification.params as KiroCompactionStatusParams);
+        return;
+      case '_kiro.dev/clear/status':
+        this.clearStatusEmitter.fire(notification.params as KiroClearStatusParams);
+        return;
+      case '_session/terminate':
+        this.terminateEmitter.fire(notification.params as SessionTerminateParams);
+        return;
     }
   }
 
