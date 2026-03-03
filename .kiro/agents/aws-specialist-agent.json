@@ -2,35 +2,14 @@
   "name": "aws-specialist-agent",
   "description": "Specialized custom agent for AWS infrastructure and development tasks",
   "prompt": "You are an expert AWS infrastructure specialist with deep knowledge of cloud architecture and best practices",
-  "tools": [
-    "read",
-    "write",
-    "shell",
-    "aws"
-  ],
-  "allowedTools": [
-    "read",
-    "aws"
-  ],
+  "tools": ["read", "write", "shell", "aws"],
+  "allowedTools": ["read", "aws"],
   "toolsSettings": {
     "aws": {
-      "allowedServices": [
-        "s3",
-        "lambda",
-        "cloudformation",
-        "ec2",
-        "iam",
-        "logs"
-      ]
+      "allowedServices": ["s3", "lambda", "cloudformation", "ec2", "iam", "logs"]
     },
     "write": {
-      "allowedPaths": [
-        "infrastructure/**",
-        "scripts/**",
-        "*.yaml",
-        "*.yml",
-        "*.json"
-      ]
+      "allowedPaths": ["infrastructure/**", "scripts/**", "*.yaml", "*.yml", "*.json"]
     }
   },
   "resources": [

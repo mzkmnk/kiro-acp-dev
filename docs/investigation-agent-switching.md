@@ -95,13 +95,13 @@ Global:    ~/.kiro/agents
 
 ### 5. 既存コードの対応状況
 
-| レイヤー | 状態 | 詳細 |
-|---|---|---|
-| `AcpClient.setMode()` | ✅ 実装済み | `session/set_mode` を送信する |
-| `ChatViewProvider.applyConfigOption()` | ✅ 実装済み | `configId === 'mode'` で `setMode()` を呼ぶ |
-| `buildConfigOptionsFromResult()` | ✅ 実装済み | `modes` → `ConfigOption` (category='mode') に変換 |
-| `ChatState.configOptions` | ✅ mode データ保持済み | webview 側の state に mode が入っている |
-| **UI 表示** | ❌ 未対応 | `category === 'model'` のみフィルタしており mode が表示されない |
+| レイヤー                               | 状態                   | 詳細                                                            |
+| -------------------------------------- | ---------------------- | --------------------------------------------------------------- |
+| `AcpClient.setMode()`                  | ✅ 実装済み            | `session/set_mode` を送信する                                   |
+| `ChatViewProvider.applyConfigOption()` | ✅ 実装済み            | `configId === 'mode'` で `setMode()` を呼ぶ                     |
+| `buildConfigOptionsFromResult()`       | ✅ 実装済み            | `modes` → `ConfigOption` (category='mode') に変換               |
+| `ChatState.configOptions`              | ✅ mode データ保持済み | webview 側の state に mode が入っている                         |
+| **UI 表示**                            | ❌ 未対応              | `category === 'model'` のみフィルタしており mode が表示されない |
 
 該当箇所 (`chat-view.tsx` 303行目付近):
 

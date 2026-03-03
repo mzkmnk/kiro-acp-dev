@@ -434,9 +434,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       );
 
       sessions = entries
-        .filter(
-          (e): e is NonNullable<typeof e> => e !== undefined,
-        )
+        .filter((e): e is NonNullable<typeof e> => e !== undefined)
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     } catch {
       // Directory may not exist yet.

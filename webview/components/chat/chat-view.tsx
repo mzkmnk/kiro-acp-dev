@@ -163,63 +163,63 @@ export function ChatView({
     <div className="flex h-full flex-col overflow-hidden bg-(--vscode-sideBar-background) text-(--vscode-sideBar-foreground)">
       <header className="sticky top-0 z-10 bg-(--vscode-sideBar-background)/95 px-3 py-2 backdrop-blur">
         {ready ? (
-        <div className="relative flex items-center justify-end gap-1">
-          <button
-            type="button"
-            onClick={() => setSessionListOpen(!sessionListOpen)}
-            title="Switch session"
-            className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
-          >
-            <History className="h-3.5 w-3.5" strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            onClick={onNewSession}
-            disabled={items.length === 0}
-            title="New chat"
-            className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground) disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
-          </button>
-          {sessionListOpen ? (
-            <div
-              ref={sessionListRef}
-              className="absolute right-0 top-full z-20 mt-1 max-h-64 w-full min-w-0 overflow-y-auto rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg"
+          <div className="relative flex items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => setSessionListOpen(!sessionListOpen)}
+              title="Switch session"
+              className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
             >
-              {sessions.length > 0 ? (
-                sessions.map((s) => (
-                  <button
-                    key={s.sessionId}
-                    type="button"
-                    onClick={() => {
-                      if (s.sessionId !== currentSessionId) {
-                        onSwitchSession(s.sessionId);
-                      }
-                      setSessionListOpen(false);
-                    }}
-                    className={`flex w-full cursor-pointer flex-col gap-0.5 px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)] ${
-                      s.sessionId === currentSessionId
-                        ? 'text-(--vscode-textLink-foreground)'
-                        : 'text-(--vscode-editor-foreground)'
-                    }`}
-                  >
-                    <span className="line-clamp-1 text-[12px]">{s.title}</span>
-                    <span className="line-clamp-1 text-[10px] text-(--vscode-descriptionForeground)">
-                      {s.cwd}
-                    </span>
-                    <span className="text-[10px] text-(--vscode-descriptionForeground)">
-                      {new Date(s.updatedAt).toLocaleString()}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <p className="px-3 py-1.5 text-[12px] text-(--vscode-descriptionForeground)">
-                  No sessions
-                </p>
-              )}
-            </div>
-          ) : null}
-        </div>
+              <History className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              onClick={onNewSession}
+              disabled={items.length === 0}
+              title="New chat"
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground) disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+            {sessionListOpen ? (
+              <div
+                ref={sessionListRef}
+                className="absolute right-0 top-full z-20 mt-1 max-h-64 w-full min-w-0 overflow-y-auto rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg"
+              >
+                {sessions.length > 0 ? (
+                  sessions.map((s) => (
+                    <button
+                      key={s.sessionId}
+                      type="button"
+                      onClick={() => {
+                        if (s.sessionId !== currentSessionId) {
+                          onSwitchSession(s.sessionId);
+                        }
+                        setSessionListOpen(false);
+                      }}
+                      className={`flex w-full cursor-pointer flex-col gap-0.5 px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)] ${
+                        s.sessionId === currentSessionId
+                          ? 'text-(--vscode-textLink-foreground)'
+                          : 'text-(--vscode-editor-foreground)'
+                      }`}
+                    >
+                      <span className="line-clamp-1 text-[12px]">{s.title}</span>
+                      <span className="line-clamp-1 text-[10px] text-(--vscode-descriptionForeground)">
+                        {s.cwd}
+                      </span>
+                      <span className="text-[10px] text-(--vscode-descriptionForeground)">
+                        {new Date(s.updatedAt).toLocaleString()}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-3 py-1.5 text-[12px] text-(--vscode-descriptionForeground)">
+                    No sessions
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </header>
 
