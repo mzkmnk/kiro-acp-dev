@@ -301,7 +301,7 @@ export function ChatView({
                 <Plus className="h-4 w-4" />
               </button>
               {configOptions
-                .filter((opt) => opt.category === 'model')
+                .filter((opt) => opt.category === 'model' || opt.category === 'mode')
                 .map((opt) => (
                   <ModelSelector
                     key={opt.id}
