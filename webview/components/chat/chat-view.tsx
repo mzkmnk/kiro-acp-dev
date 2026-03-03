@@ -175,8 +175,9 @@ export function ChatView({
           <button
             type="button"
             onClick={onNewSession}
+            disabled={items.length === 0}
             title="New chat"
-            className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
+            className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground) disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>

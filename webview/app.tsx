@@ -17,7 +17,11 @@ export function App(): React.JSX.Element {
       ready={state.ready}
       onSubmitPrompt={(text) => controller.sendPrompt(text)}
       onCancel={() => controller.cancel()}
-      onNewSession={() => controller.newSession()}
+      onNewSession={() => {
+        if (state.items.length > 0) {
+          controller.newSession();
+        }
+      }}
       onSwitchSession={(sessionId) => controller.switchSession(sessionId)}
       onSendQueuedNow={(id) => controller.sendQueuedPromptNow(id)}
       onRemoveQueued={(id) => controller.removeQueuedPrompt(id)}
