@@ -35,6 +35,7 @@ export class ChatController {
     configOptions: [],
     sessions: [],
     currentSessionId: undefined,
+    ready: false,
   };
 
   private activeAgentMessageId?: string;
@@ -315,6 +316,7 @@ export class ChatController {
         this.setState({
           sessions: message.sessions,
           currentSessionId: message.currentSessionId,
+          ready: true,
         });
         return;
       case 'sessionSwitched':

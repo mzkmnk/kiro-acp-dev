@@ -74,6 +74,7 @@ export interface ChatViewProps {
   configOptions: ConfigOptionState[];
   sessions: SessionInfo[];
   currentSessionId?: string;
+  ready: boolean;
   onSubmitPrompt: (text: string) => void;
   onCancel: () => void;
   onNewSession: () => void;
@@ -91,6 +92,7 @@ export function ChatView({
   configOptions,
   sessions,
   currentSessionId,
+  ready,
   onSubmitPrompt,
   onCancel,
   onNewSession,
@@ -144,22 +146,23 @@ export function ChatView({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-(--vscode-sideBar-background) text-(--vscode-sideBar-foreground)">
       <header className="sticky top-0 z-10 bg-(--vscode-sideBar-background)/95 px-3 py-2 backdrop-blur">
+        {ready ? (
         <div className="relative flex items-center justify-end gap-1">
           <button
             type="button"
             onClick={() => setSessionListOpen(!sessionListOpen)}
             title="Switch session"
-            className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground)"
+            className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
           >
-            <History className="h-4 w-4" />
+            <History className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>
           <button
             type="button"
             onClick={onNewSession}
             title="New chat"
-            className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground)"
+            className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>
           {sessionListOpen ? (
             <div
@@ -197,25 +200,34 @@ export function ChatView({
             </div>
           ) : null}
         </div>
+        ) : null}
       </header>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        <div className="space-y-2.5">
-          {items.map((item) => (
-            <MessageRow key={item.id} item={item} onPermissionResponse={onPermissionResponse} />
-          ))}
-        </div>
+        {!ready ? (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-(--vscode-descriptionForeground)" />
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2.5">
+              {items.map((item) => (
+                <MessageRow key={item.id} item={item} onPermissionResponse={onPermissionResponse} />
+              ))}
+            </div>
 
-        {streaming &&
-        items.length > 0 &&
-        items[items.length - 1].role !== 'agent' &&
-        !items.some(
-          (i) =>
-            (i.role === 'tool' || i.role === 'permission') &&
-            (i.toolStatus === 'running' || i.toolStatus === 'pending' || !i.toolStatus),
-        ) ? (
-          <p className="mt-2 text-xs text-(--vscode-descriptionForeground)">thinking...</p>
-        ) : null}
+            {streaming &&
+            items.length > 0 &&
+            items[items.length - 1].role !== 'agent' &&
+            !items.some(
+              (i) =>
+                (i.role === 'tool' || i.role === 'permission') &&
+                (i.toolStatus === 'running' || i.toolStatus === 'pending' || !i.toolStatus),
+            ) ? (
+              <p className="mt-2 text-xs text-(--vscode-descriptionForeground)">thinking...</p>
+            ) : null}
+          </>
+        )}
       </div>
 
       <footer className="shrink-0 bg-(--vscode-sideBar-background) p-3">
@@ -270,7 +282,9 @@ export function ChatView({
               }
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
+                if (ready) {
+                  event.currentTarget.form?.requestSubmit();
+                }
               }
             }}
             placeholder="Message Kiro Agent — @ to include context"
@@ -305,7 +319,7 @@ export function ChatView({
             <button
               type={streaming && !prompt.trim() ? 'button' : 'submit'}
               onClick={streaming && !prompt.trim() ? onCancel : undefined}
-              disabled={!streaming && !prompt.trim()}
+              disabled={!ready || (!streaming && !prompt.trim())}
               title={
                 streaming && !prompt.trim()
                   ? 'Stop generation'

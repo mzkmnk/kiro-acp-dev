@@ -91,4 +91,5 @@ export interface ChatState {
   configOptions: ConfigOptionState[];
   sessions: SessionInfo[];
   currentSessionId?: string;
+  ready: boolean;
 }

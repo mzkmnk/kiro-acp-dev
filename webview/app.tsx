@@ -14,6 +14,7 @@ export function App(): React.JSX.Element {
       configOptions={state.configOptions}
       sessions={state.sessions}
       currentSessionId={state.currentSessionId}
+      ready={state.ready}
       onSubmitPrompt={(text) => controller.sendPrompt(text)}
       onCancel={() => controller.cancel()}
       onNewSession={() => controller.newSession()}
