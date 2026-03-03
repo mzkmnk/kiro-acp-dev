@@ -1,5 +1,17 @@
 import * as React from 'react';
-import { Square, Plus, ArrowUp, Wrench, Play, X, ChevronDown, Shield, ChevronRight, Check, Loader2 } from 'lucide-react';
+import {
+  Square,
+  Plus,
+  ArrowUp,
+  Wrench,
+  Play,
+  X,
+  ChevronDown,
+  Shield,
+  ChevronRight,
+  Check,
+  Loader2,
+} from 'lucide-react';
 import hljs from 'highlight.js/lib/core';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import typescript from 'highlight.js/lib/languages/typescript';
@@ -246,7 +258,10 @@ function MessageRow({
 }): React.JSX.Element {
   const isUser = item.role === 'user';
   const isMeta =
-    item.role === 'system' || item.role === 'error' || item.role === 'tool' || item.role === 'permission';
+    item.role === 'system' ||
+    item.role === 'error' ||
+    item.role === 'tool' ||
+    item.role === 'permission';
   if (item.role === 'tool') {
     return <ToolCallRow item={item} />;
   }
@@ -329,17 +344,19 @@ function PermissionRow({
   const [open, setOpen] = React.useState(false);
   const status = item.toolStatus;
   const resolvedLabel = item.resolved
-    ? (item.permissionOptions ?? []).find((o) => o.optionId === item.resolvedOptionId)?.label ??
-      item.resolvedOptionId
+    ? ((item.permissionOptions ?? []).find((o) => o.optionId === item.resolvedOptionId)?.label ??
+      item.resolvedOptionId)
     : undefined;
 
-  const statusIcon = status
-    ? status === 'completed'
-      ? <Check className="h-3 w-3 text-emerald-400" />
-      : status === 'failed'
-        ? <X className="h-3 w-3 text-red-400" />
-        : <Loader2 className="h-3 w-3 animate-spin" />
-    : null;
+  const statusIcon = status ? (
+    status === 'completed' ? (
+      <Check className="h-3 w-3 text-emerald-400" />
+    ) : status === 'failed' ? (
+      <X className="h-3 w-3 text-red-400" />
+    ) : (
+      <Loader2 className="h-3 w-3 animate-spin" />
+    )
+  ) : null;
 
   return (
     <article className="text-[12px] text-(--vscode-descriptionForeground)">

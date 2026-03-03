@@ -6,8 +6,22 @@ export type WebviewToExtensionMessage =
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
-  | { type: 'toolCall'; toolCallId: string; name: string; title: string; status: string; content: string }
-  | { type: 'toolCallUpdate'; toolCallId: string; name: string; title: string; status: string; content: string }
+  | {
+      type: 'toolCall';
+      toolCallId: string;
+      name: string;
+      title: string;
+      status: string;
+      content: string;
+    }
+  | {
+      type: 'toolCallUpdate';
+      toolCallId: string;
+      name: string;
+      title: string;
+      status: string;
+      content: string;
+    }
   | {
       type: 'requestPermission';
       id: number;

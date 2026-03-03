@@ -108,7 +108,8 @@ export class ChatController {
    */
   public respondPermission(requestId: number, optionId: string): void {
     const target = this.state.items.find(
-      (item) => item.role === 'permission' && item.permissionRequestId === requestId && !item.resolved,
+      (item) =>
+        item.role === 'permission' && item.permissionRequestId === requestId && !item.resolved,
     );
     if (!target) {
       return;
@@ -181,10 +182,22 @@ export class ChatController {
         this.queueAgentChunk(message.text);
         return;
       case 'toolCall':
-        this.upsertToolCall(message.toolCallId, message.name, message.title, message.status, message.content);
+        this.upsertToolCall(
+          message.toolCallId,
+          message.name,
+          message.title,
+          message.status,
+          message.content,
+        );
         return;
       case 'toolCallUpdate':
-        this.upsertToolCall(message.toolCallId, message.name, message.title, message.status, message.content);
+        this.upsertToolCall(
+          message.toolCallId,
+          message.name,
+          message.title,
+          message.status,
+          message.content,
+        );
         return;
       case 'requestPermission': {
         this.flushPendingAgentChunk();
@@ -294,14 +307,21 @@ export class ChatController {
     this.vscode.postMessage({ type: 'prompt', text });
   }
 
-  private upsertToolCall(toolCallId: string, name: string, title: string, status: string, content: string): void {
+  private upsertToolCall(
+    toolCallId: string,
+    name: string,
+    title: string,
+    status: string,
+    content: string,
+  ): void {
     this.flushPendingAgentChunk();
     this.activeAgentMessageId = undefined;
 
     const normalizedStatus = status === 'in_progress' ? 'running' : status;
 
     const existingIndex = this.state.items.findIndex(
-      (item) => (item.role === 'tool' || item.role === 'permission') && item.toolCallId === toolCallId,
+      (item) =>
+        (item.role === 'tool' || item.role === 'permission') && item.toolCallId === toolCallId,
     );
 
     if (existingIndex < 0) {
