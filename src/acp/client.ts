@@ -101,6 +101,8 @@ export class AcpClient {
   private stopping = false;
   /** Resolved absolute path to `kiro-cli`. / 解決済みの `kiro-cli` 絶対パス。 */
   private cliPath?: string;
+  /** Working directory for the ACP process. / ACP プロセスの作業ディレクトリ。 */
+  private cwd?: string;
 
   /**
    * Creates an ACP client instance with optional output and timeout settings.
@@ -113,12 +115,14 @@ export class AcpClient {
     outputChannel?: vscode.OutputChannel;
     requestTimeoutMs?: number;
     traceRpc?: boolean;
+    cwd?: string;
   }) {
     this.outputChannel = options?.outputChannel ?? vscode.window.createOutputChannel('Kiro ACP');
     this.requestTimeoutMs = options?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.traceRpc =
       options?.traceRpc ??
       vscode.workspace.getConfiguration('kiro-acp').get<boolean>('traceRpc', false);
+    this.cwd = options?.cwd;
   }
 
   /**
@@ -405,6 +409,7 @@ export class AcpClient {
     // TODO: Allow users to configure the agent name (e.g., via settings).
     this.process = spawn(this.cliPath, ['acp', '--agent', 'kiro_default'], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: this.cwd,
     });
     this.stdoutBuffer = '';
 
