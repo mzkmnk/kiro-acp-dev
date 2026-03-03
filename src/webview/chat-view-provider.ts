@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { AcpClient } from '../acp/client';
 import type {
   InitializeResult,
+  SessionRequestPermissionParams,
+  SessionRequestPermissionResult,
   SessionUpdateParams,
   TextContent,
   ToolCallContent,
@@ -11,12 +13,21 @@ import type {
 export type WebviewToExtensionMessage =
   | { type: 'prompt'; text: string }
   | { type: 'cancel' }
-  | { type: 'newSession' };
+  | { type: 'newSession' }
+  | { type: 'permissionResponse'; id: number; optionId: string };
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
-  | { type: 'toolCall'; name: string; status: string }
-  | { type: 'toolCallUpdate'; name: string; content: string }
+  | { type: 'toolCall'; toolCallId: string; name: string; title: string; status: string; content: string }
+  | { type: 'toolCallUpdate'; toolCallId: string; name: string; title: string; status: string; content: string }
+  | {
+      type: 'requestPermission';
+      id: number;
+      toolCallId: string;
+      toolName: string;
+      params: string;
+      options: Array<{ optionId: string; label: string }>;
+    }
   | { type: 'turnEnd' }
   | { type: 'error'; message: string }
   | { type: 'ready'; agentInfo: { name: string; version: string } };
@@ -33,6 +44,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   private initializeResult?: InitializeResult;
   private startPromise?: Promise<InitializeResult>;
   private sessionPromise?: Promise<string>;
+  private readonly pendingPermissionRequests = new Map<number, (optionId: string) => void>();
   private readonly disposables: vscode.Disposable[];
 
   constructor(
@@ -45,6 +57,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         void this.handleSessionUpdate(params);
       }),
     ];
+
+    this.acpClient.registerHandler('session/request_permission', async (params) => {
+      return this.handlePermissionRequest(params as SessionRequestPermissionParams);
+    });
   }
 
   /**
@@ -138,6 +154,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         case 'newSession':
           await this.createNewSession();
           return;
+        case 'permissionResponse': {
+          const resolver = this.pendingPermissionRequests.get(message.id);
+          if (!resolver) {
+            return;
+          }
+          this.pendingPermissionRequests.delete(message.id);
+          resolver(message.optionId);
+          return;
+        }
       }
     } catch (error) {
       await this.postError(error);
@@ -217,15 +242,21 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       case 'tool_call': {
         await this.postMessage({
           type: 'toolCall',
-          name: update.title,
-          status: update.status ?? 'pending',
+          toolCallId: update.toolCallId,
+          name: this.toolDisplayName(update.kind, update.rawInput),
+          title: update.title ?? '',
+          status: this.normalizeToolCallStatus(update.status),
+          content: this.renderToolCallUpdateContent(update.content),
         });
         return;
       }
       case 'tool_call_update': {
         await this.postMessage({
           type: 'toolCallUpdate',
-          name: update.title ?? 'tool',
+          toolCallId: update.toolCallId,
+          name: this.toolDisplayName(update.kind, update.rawInput),
+          title: update.title ?? '',
+          status: this.normalizeToolCallStatus(update.status),
           content: this.renderToolCallUpdateContent(update.content),
         });
         return;
@@ -252,6 +283,121 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       .filter(Boolean);
 
     return textBlocks.join('\n') || `updated (${content[0].type})`;
+  }
+
+  private normalizeToolCallStatus(status: string | undefined): string {
+    if (!status) {
+      return 'pending';
+    }
+    return status === 'in_progress' ? 'running' : status;
+  }
+
+  private toolKindLabel(kind: string | undefined): string {
+    switch (kind) {
+      case 'read': return 'read';
+      case 'edit': return 'edit';
+      case 'delete': return 'delete';
+      case 'move': return 'move';
+      case 'search': return 'search';
+      case 'execute': return 'shell';
+      case 'think': return 'think';
+      case 'fetch': return 'fetch';
+      default: return 'tool';
+    }
+  }
+
+  private toolDisplayName(kind: string | undefined, rawInput: unknown): string {
+    const label = this.toolKindLabel(kind);
+    const purpose =
+      rawInput && typeof rawInput === 'object' && '__tool_use_purpose' in rawInput
+        ? String((rawInput as Record<string, unknown>).__tool_use_purpose)
+        : undefined;
+    return purpose ? `${label}(${purpose})` : label;
+  }
+
+  private async handlePermissionRequest(
+    params: SessionRequestPermissionParams,
+  ): Promise<SessionRequestPermissionResult> {
+    const optionId = await this.waitForPermissionDecision({
+      id: this.createRequestId(),
+      toolCallId: params.toolCall.toolCallId,
+      toolName: params.toolCall.title ?? 'tool',
+      paramSummary: this.renderPermissionParams(params.toolCall.rawInput),
+      options: params.options.map((option) => ({
+        optionId: option.optionId,
+        label: this.toPermissionLabel(option.kind),
+      })),
+    });
+
+    return {
+      outcome: {
+        outcome: 'selected',
+        optionId,
+      },
+    };
+  }
+
+  private async waitForPermissionDecision(request: {
+    id: number;
+    toolCallId: string;
+    toolName: string;
+    paramSummary: string;
+    options: Array<{ optionId: string; label: string }>;
+  }): Promise<string> {
+    await this.postMessage({
+      type: 'requestPermission',
+      id: request.id,
+      toolCallId: request.toolCallId,
+      toolName: request.toolName,
+      params: request.paramSummary,
+      options: request.options,
+    });
+
+    const rejectOptionId =
+      request.options.find((o) => o.optionId.startsWith('reject'))?.optionId ?? 'reject_once';
+
+    return new Promise<string>((resolve) => {
+      const timeoutHandle = setTimeout(() => {
+        this.pendingPermissionRequests.delete(request.id);
+        resolve(rejectOptionId);
+      }, 120_000);
+
+      this.pendingPermissionRequests.set(request.id, (optionId) => {
+        clearTimeout(timeoutHandle);
+        resolve(optionId);
+      });
+    });
+  }
+
+  private renderPermissionParams(rawInput: unknown): string {
+    if (rawInput === undefined) {
+      return '(no parameters)';
+    }
+
+    try {
+      return JSON.stringify(rawInput, null, 2);
+    } catch {
+      return String(rawInput);
+    }
+  }
+
+  private createRequestId(): number {
+    return Date.now() + Math.floor(Math.random() * 1000);
+  }
+
+  private toPermissionLabel(kind: string): string {
+    switch (kind) {
+      case 'allow_once':
+        return 'Yes';
+      case 'allow_always':
+        return 'Always';
+      case 'reject_once':
+        return 'No';
+      case 'reject_always':
+        return 'Never';
+      default:
+        return kind;
+    }
   }
 
   private async postError(error: unknown): Promise<void> {

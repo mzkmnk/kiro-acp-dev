@@ -20,19 +20,19 @@ ACP Agent がツールを呼び出した際の UI 表示と、ユーザー承認
 
 ### ToolCall 表示
 
-- [ ] `session/update` の `ToolCall` 受信時に、ツール名とステータスを表示
+- [x] `session/update` の `ToolCall` 受信時に、ツール名とステータスを表示
   - ステータス: pending → running → completed / failed
   - 折りたたみ可能な UI（ツール名クリックで詳細展開）
-- [ ] `ToolCallUpdate` 受信時に、対応するツール表示の進捗を更新
+- [x] `ToolCallUpdate` 受信時に、対応するツール表示の進捗を更新
 
 ### 権限承認 UI
 
-- [ ] `session/request_permission` を ACP Client で受信
+- [x] `session/request_permission` を ACP Client で受信
   - Agent → Client リクエスト（id あり、レスポンスが必要）
-- [ ] Webview に承認ダイアログを表示
+- [x] Webview に承認ダイアログを表示
   - ツール名、パラメータの概要を表示
   - 「許可」「拒否」ボタン
-- [ ] ユーザーの選択結果を JSON-RPC レスポンスとして Agent に返す
+- [x] ユーザーの選択結果を JSON-RPC レスポンスとして Agent に返す
 
 ### メッセージフロー
 

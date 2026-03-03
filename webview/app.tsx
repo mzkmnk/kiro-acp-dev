@@ -16,6 +16,9 @@ export function App(): React.JSX.Element {
       onNewSession={() => controller.newSession()}
       onSendQueuedNow={(id) => controller.sendQueuedPromptNow(id)}
       onRemoveQueued={(id) => controller.removeQueuedPrompt(id)}
+      onPermissionResponse={(requestId, optionId) =>
+        controller.respondPermission(requestId, optionId)
+      }
     />
   );
 }
