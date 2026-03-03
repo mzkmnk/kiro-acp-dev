@@ -15,6 +15,9 @@ interface PersistedState {
   items: ChatItem[];
   statusText: string;
   configOptions: ConfigOptionState[];
+  sessions: SessionInfo[];
+  currentSessionId?: string;
+  ready: boolean;
 }
 
 /**
@@ -467,6 +470,9 @@ export class ChatController {
       items: this.state.items,
       statusText: this.state.statusText,
       configOptions: this.state.configOptions,
+      sessions: this.state.sessions,
+      currentSessionId: this.state.currentSessionId,
+      ready: this.state.ready,
     };
     this.vscode.setState(persisted);
   }
@@ -481,6 +487,9 @@ export class ChatController {
       items: raw.items,
       statusText: raw.statusText || this.state.statusText,
       configOptions: raw.configOptions ?? [],
+      sessions: raw.sessions ?? [],
+      currentSessionId: raw.currentSessionId,
+      ready: raw.ready ?? false,
     };
   }
 
