@@ -4,7 +4,6 @@ import type {
   ConfigOptionState,
   ExtensionToWebviewMessage,
   QueuedPrompt,
-  SessionInfo,
 } from './types';
 import { getVsCodeApi } from './vscode-api';
 
