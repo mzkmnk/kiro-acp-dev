@@ -12,6 +12,8 @@ import {
   Check,
   Loader2,
   History,
+  Cpu,
+  Bot,
 } from 'lucide-react';
 import hljs from 'highlight.js/lib/core';
 import plaintext from 'highlight.js/lib/languages/plaintext';
@@ -107,6 +109,20 @@ export function ChatView({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [sessionListOpen, setSessionListOpen] = React.useState(false);
   const sessionListRef = React.useRef<HTMLDivElement>(null);
+  const footerRef = React.useRef<HTMLDivElement>(null);
+  const [compactSelectors, setCompactSelectors] = React.useState(false);
+
+  React.useEffect(() => {
+    const el = footerRef.current;
+    if (!el) {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      setCompactSelectors(entry.contentRect.width < 340);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     if (!scrollRef.current) {
@@ -291,7 +307,7 @@ export function ChatView({
             className="max-h-55 min-h-11 w-full resize-none rounded-2xl border border-transparent bg-[color-mix(in_srgb,var(--vscode-editor-background)_78%,#c7ccda_22%)] px-4 py-3 text-[13px] text-(--vscode-editor-foreground) outline-none"
           />
 
-          <div className="flex items-center justify-between gap-2">
+          <div ref={footerRef} className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-[12px] text-(--vscode-descriptionForeground)">
               <button
                 type="button"
@@ -306,6 +322,7 @@ export function ChatView({
                   <ModelSelector
                     key={opt.id}
                     option={opt}
+                    compact={compactSelectors}
                     onChange={(value) => onSetConfigOption(opt.id, value)}
                   />
                 ))}
@@ -501,15 +518,18 @@ function PermissionRow({
 
 function ModelSelector({
   option,
+  compact,
   onChange,
 }: {
   option: ConfigOptionState;
+  compact?: boolean;
   onChange: (value: string) => void;
 }): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   const currentLabel =
     option.values.find((v) => v.value === option.currentValue)?.name ?? option.currentValue;
+  const Icon = option.category === 'mode' ? Bot : Cpu;
 
   React.useEffect(() => {
     if (!open) {
@@ -529,10 +549,17 @@ function ModelSelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        title={currentLabel}
         className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1"
       >
-        {currentLabel}
-        <ChevronDown className="h-3.5 w-3.5" />
+        {compact ? (
+          <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+        ) : (
+          <>
+            {currentLabel}
+            <ChevronDown className="h-3.5 w-3.5" />
+          </>
+        )}
       </button>
       {open ? (
         <div className="absolute bottom-full left-0 z-20 mb-1 min-w-40 rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg">
