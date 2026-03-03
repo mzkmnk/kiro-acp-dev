@@ -1,7 +1,12 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 
 import { AcpClient } from '../acp/client';
 import type {
+  ConfigOption,
+  ConfigOptionsUpdate,
   InitializeResult,
   SessionRequestPermissionParams,
   SessionRequestPermissionResult,
@@ -14,7 +19,9 @@ export type WebviewToExtensionMessage =
   | { type: 'prompt'; text: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
-  | { type: 'permissionResponse'; id: number; optionId: string };
+  | { type: 'switchSession'; sessionId: string }
+  | { type: 'permissionResponse'; id: number; optionId: string }
+  | { type: 'setConfigOption'; configId: string; value: string };
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
@@ -44,7 +51,33 @@ export type ExtensionToWebviewMessage =
     }
   | { type: 'turnEnd' }
   | { type: 'error'; message: string }
-  | { type: 'ready'; agentInfo: { name: string; version: string } };
+  | { type: 'ready'; agentInfo: { name: string; version: string } }
+  | {
+      type: 'configOptions';
+      options: Array<{
+        id: string;
+        name: string;
+        category?: string;
+        currentValue: string;
+        values: Array<{ value: string; name: string }>;
+      }>;
+    }
+  | { type: 'sessionStatus'; status: string; message: string }
+  | {
+      type: 'sessionList';
+      sessions: Array<{
+        sessionId: string;
+        title: string;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+      currentSessionId?: string;
+    }
+  | {
+      type: 'sessionSwitched';
+      sessionId: string;
+      items: Array<{ id: string; role: string; text: string }>;
+    };
 
 /**
  * Provides and bridges the chat webview with ACP session APIs.
@@ -53,11 +86,14 @@ export type ExtensionToWebviewMessage =
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'kiro-acp.chatView';
 
+  private static readonly SESSION_ID_KEY = 'kiro-acp.lastSessionId';
+
   private view?: vscode.WebviewView;
   private sessionId?: string;
   private initializeResult?: InitializeResult;
   private startPromise?: Promise<InitializeResult>;
   private sessionPromise?: Promise<string>;
+  private configOptions: ConfigOption[] = [];
   private readonly pendingPermissionRequests = new Map<number, (optionId: string) => void>();
   private readonly disposables: vscode.Disposable[];
 
@@ -65,10 +101,40 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     private readonly extensionUri: vscode.Uri,
     private readonly acpClient: AcpClient,
     private readonly workspacePath: string,
+    private readonly context: vscode.ExtensionContext,
   ) {
     this.disposables = [
       this.acpClient.onUpdate((params) => {
         void this.handleSessionUpdate(params);
+      }),
+      this.acpClient.onCompactionStatus((params) => {
+        if (this.sessionId && params.sessionId === this.sessionId) {
+          void this.postMessage({
+            type: 'sessionStatus',
+            status: 'compacting',
+            message: params.status,
+          });
+        }
+      }),
+      this.acpClient.onClearStatus((params) => {
+        if (this.sessionId && params.sessionId === this.sessionId) {
+          void this.postMessage({
+            type: 'sessionStatus',
+            status: 'clearing',
+            message: params.status,
+          });
+        }
+      }),
+      this.acpClient.onTerminate((params) => {
+        if (this.sessionId && params.sessionId === this.sessionId) {
+          this.sessionId = undefined;
+          this.persistSessionId(undefined);
+          void this.postMessage({
+            type: 'sessionStatus',
+            status: 'terminated',
+            message: 'Session terminated',
+          });
+        }
       }),
     ];
 
@@ -109,7 +175,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
    */
   public async createNewSession(): Promise<void> {
     try {
+      this.sessionId = undefined;
+      this.persistSessionId(undefined);
       this.sessionId = await this.createSession();
+      await this.postSessionList();
     } catch (error) {
       await this.postError(error);
     }
@@ -168,6 +237,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         case 'newSession':
           await this.createNewSession();
           return;
+        case 'switchSession':
+          await this.handleSwitchSession(message.sessionId);
+          return;
         case 'permissionResponse': {
           const resolver = this.pendingPermissionRequests.get(message.id);
           if (!resolver) {
@@ -175,6 +247,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
           }
           this.pendingPermissionRequests.delete(message.id);
           resolver(message.optionId);
+          return;
+        }
+        case 'setConfigOption': {
+          if (!this.sessionId) {
+            return;
+          }
+          await this.applyConfigOption(this.sessionId, message.configId, message.value);
           return;
         }
       }
@@ -190,6 +269,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       agentInfo: initializeResult.agentInfo,
     });
     await this.ensureSession();
+    if (this.configOptions.length > 0) {
+      await this.postConfigOptions();
+    }
   }
 
   private async ensureStarted(): Promise<InitializeResult> {
@@ -216,6 +298,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       return this.sessionId;
     }
 
+    const savedId = this.context.workspaceState.get<string>(ChatViewProvider.SESSION_ID_KEY);
+    if (savedId) {
+      try {
+        return await this.loadSession(savedId);
+      } catch {
+        // Saved session is no longer valid; create a new one.
+        this.persistSessionId(undefined);
+      }
+    }
+
     return this.createSession();
   }
 
@@ -228,6 +320,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.ensureStarted();
       const result = await this.acpClient.newSession(this.workspacePath);
       this.sessionId = result.sessionId;
+      this.persistSessionId(result.sessionId);
+
+      if (result.configOptions) {
+        this.configOptions = result.configOptions;
+      } else {
+        this.configOptions = this.buildConfigOptionsFromResult(result);
+      }
+
+      if (this.configOptions.length > 0) {
+        await this.postConfigOptions();
+      }
+
+      await this.postSessionList();
+
       return result.sessionId;
     })();
 
@@ -236,6 +342,200 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     } finally {
       this.sessionPromise = undefined;
     }
+  }
+
+  /**
+   * Loads an existing ACP session by ID and restores config options.
+   * 既存の ACP セッションを ID で読み込み、設定オプションを復元します。
+   *
+   * @param sessionId - Session ID to load.
+   *                    読み込むセッション ID。
+   * @returns The loaded session ID.
+   *          読み込まれたセッション ID。
+   */
+  private async loadSession(sessionId: string): Promise<string> {
+    await this.ensureStarted();
+    const result = await this.acpClient.loadSession(sessionId, this.workspacePath);
+    this.sessionId = result.sessionId;
+    this.persistSessionId(result.sessionId);
+
+    if (result.configOptions) {
+      this.configOptions = result.configOptions;
+    } else {
+      this.configOptions = this.buildConfigOptionsFromResult(result);
+    }
+
+    if (this.configOptions.length > 0) {
+      await this.postConfigOptions();
+    }
+
+    await this.postSessionList();
+
+    return result.sessionId;
+  }
+
+  /**
+   * Persists or clears the session ID in workspace state.
+   * ワークスペース状態にセッション ID を保存またはクリアします。
+   *
+   * @param sessionId - Session ID to persist, or undefined to clear.
+   *                    保存するセッション ID。undefined でクリア。
+   */
+  private persistSessionId(sessionId: string | undefined): void {
+    void this.context.workspaceState.update(ChatViewProvider.SESSION_ID_KEY, sessionId);
+  }
+
+  /**
+   * Reads session metadata files from disk and sends the list to the webview.
+   * ディスクからセッションメタデータを読み取り、一覧を Webview に送信します。
+   */
+  private async postSessionList(): Promise<void> {
+    const sessionsDir = path.join(os.homedir(), '.kiro', 'sessions', 'cli');
+    let sessions: Array<{
+      sessionId: string;
+      title: string;
+      createdAt: string;
+      updatedAt: string;
+    }> = [];
+
+    try {
+      const files = await fs.readdir(sessionsDir);
+      const jsonFiles = files.filter((f) => f.endsWith('.json'));
+
+      const entries = await Promise.all(
+        jsonFiles.map(async (file) => {
+          try {
+            const raw = await fs.readFile(path.join(sessionsDir, file), 'utf-8');
+            const meta = JSON.parse(raw) as {
+              session_id: string;
+              cwd: string;
+              created_at: string;
+              updated_at: string;
+            };
+            const title = await this.readSessionTitle(
+              path.join(sessionsDir, file.replace('.json', '.jsonl')),
+            );
+            return {
+              sessionId: meta.session_id,
+              title,
+              createdAt: meta.created_at,
+              updatedAt: meta.updated_at,
+            };
+          } catch {
+            return undefined;
+          }
+        }),
+      );
+
+      sessions = entries
+        .filter(
+          (e): e is NonNullable<typeof e> => e !== undefined,
+        )
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    } catch {
+      // Directory may not exist yet.
+    }
+
+    await this.postMessage({
+      type: 'sessionList',
+      sessions,
+      currentSessionId: this.sessionId,
+    });
+  }
+
+  /**
+   * Reads the first user prompt from a .jsonl file to use as session title.
+   * .jsonl ファイルから最初のユーザープロンプトを読み取り、セッションタイトルとして使用します。
+   *
+   * @param jsonlPath - Path to the .jsonl event log.
+   *                    .jsonl イベントログのパス。
+   * @returns First prompt text or fallback title.
+   *          最初のプロンプトテキストまたはフォールバックタイトル。
+   */
+  private async readSessionTitle(jsonlPath: string): Promise<string> {
+    try {
+      const content = await fs.readFile(jsonlPath, 'utf-8');
+      for (const line of content.split('\n')) {
+        if (!line.trim()) {
+          continue;
+        }
+        const entry = JSON.parse(line) as {
+          kind: string;
+          data: { content: Array<{ kind: string; data: string }> };
+        };
+        if (entry.kind === 'Prompt') {
+          const text = entry.data.content.find((c) => c.kind === 'text')?.data ?? '';
+          return text.slice(0, 80) || 'New session';
+        }
+      }
+    } catch {
+      // File may not exist or be empty.
+    }
+    return 'New session';
+  }
+
+  /**
+   * Switches to an existing session by loading it via ACP and restoring chat history.
+   * ACP 経由で既存セッションを読み込み、チャット履歴を復元してセッションを切り替えます。
+   *
+   * @param sessionId - Target session ID to switch to.
+   *                    切り替え先のセッション ID。
+   */
+  private async handleSwitchSession(sessionId: string): Promise<void> {
+    try {
+      await this.loadSession(sessionId);
+      const items = await this.readSessionHistory(sessionId);
+      await this.postMessage({ type: 'sessionSwitched', sessionId, items });
+      await this.postSessionList();
+    } catch (error) {
+      await this.postError(error);
+    }
+  }
+
+  /**
+   * Reads a session's .jsonl event log and converts it to chat items.
+   * セッションの .jsonl イベントログを読み取り、チャットアイテムに変換します。
+   *
+   * @param sessionId - Session ID whose history to read.
+   *                    履歴を読み取るセッション ID。
+   * @returns Array of chat items reconstructed from the event log.
+   *          イベントログから再構築されたチャットアイテムの配列。
+   */
+  private async readSessionHistory(
+    sessionId: string,
+  ): Promise<Array<{ id: string; role: string; text: string }>> {
+    const jsonlPath = path.join(os.homedir(), '.kiro', 'sessions', 'cli', `${sessionId}.jsonl`);
+    const items: Array<{ id: string; role: string; text: string }> = [];
+
+    try {
+      const content = await fs.readFile(jsonlPath, 'utf-8');
+      for (const line of content.split('\n')) {
+        if (!line.trim()) {
+          continue;
+        }
+        const entry = JSON.parse(line) as {
+          kind: string;
+          data: { message_id: string; content: Array<{ kind: string; data: string }> };
+        };
+        const text =
+          entry.data.content
+            ?.filter((c) => c.kind === 'text')
+            .map((c) => c.data)
+            .join('\n') ?? '';
+        if (!text) {
+          continue;
+        }
+        if (entry.kind === 'Prompt') {
+          items.push({ id: entry.data.message_id, role: 'user', text });
+        } else if (entry.kind === 'AssistantMessage') {
+          items.push({ id: entry.data.message_id, role: 'agent', text });
+        }
+      }
+    } catch {
+      // File may not exist.
+    }
+
+    return items;
   }
 
   private async handleSessionUpdate(params: SessionUpdateParams): Promise<void> {
@@ -277,6 +577,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       }
       case 'turn_end': {
         await this.postMessage({ type: 'turnEnd' });
+        return;
+      }
+      case 'config_options_update': {
+        this.configOptions = (update as ConfigOptionsUpdate).configOptions;
+        await this.postConfigOptions();
         return;
       }
       default:
@@ -421,6 +726,96 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       default:
         return kind;
     }
+  }
+
+  /**
+   * Applies a config option change via the appropriate ACP API and updates local state.
+   * 適切な ACP API を使って設定オプションの変更を適用し、ローカル状態を更新します。
+   *
+   * @param sessionId - Target ACP session ID.
+   *                    対象の ACP セッション ID。
+   * @param configId - Config option identifier (e.g. 'model', 'mode').
+   *                   設定オプションの識別子。
+   * @param value - New value.
+   *               新しい値。
+   */
+  private async applyConfigOption(
+    sessionId: string,
+    configId: string,
+    value: string,
+  ): Promise<void> {
+    if (configId === 'model') {
+      await this.acpClient.setModel(sessionId, value);
+    } else if (configId === 'mode') {
+      await this.acpClient.setMode(sessionId, value);
+    } else {
+      const result = await this.acpClient.setConfigOption(sessionId, configId, value);
+      this.configOptions = result.configOptions;
+      await this.postConfigOptions();
+      return;
+    }
+
+    this.configOptions = this.configOptions.map((opt) =>
+      opt.id === configId ? { ...opt, currentValue: value } : opt,
+    );
+    await this.postConfigOptions();
+  }
+
+  /**
+   * Builds ConfigOption[] from legacy modes/models fields in session/new response.
+   * session/new レスポンスのレガシー modes/models フィールドから ConfigOption[] を構築します。
+   */
+  private buildConfigOptionsFromResult(result: {
+    modes?: { currentModeId: string; availableModes: Array<{ id: string; name: string }> };
+    models?: {
+      currentModelId: string;
+      availableModels: Array<{ modelId: string; name: string }>;
+    };
+  }): ConfigOption[] {
+    const options: ConfigOption[] = [];
+
+    if (result.models) {
+      options.push({
+        id: 'model',
+        name: 'Model',
+        category: 'model',
+        type: 'select',
+        currentValue: result.models.currentModelId,
+        options: result.models.availableModels.map((m) => ({
+          value: m.modelId,
+          name: m.name,
+        })),
+      });
+    }
+
+    if (result.modes) {
+      options.push({
+        id: 'mode',
+        name: 'Mode',
+        category: 'mode',
+        type: 'select',
+        currentValue: result.modes.currentModeId,
+        options: result.modes.availableModes.map((m) => ({
+          value: m.id,
+          name: m.name,
+        })),
+      });
+    }
+
+    return options;
+  }
+
+  private async postConfigOptions(): Promise<void> {
+    await this.postMessage({
+      type: 'configOptions',
+      options: this.configOptions.map((opt) => ({
+        id: opt.id,
+        name: opt.name,
+        category: opt.category,
+        currentValue: opt.currentValue,
+        values: opt.options.map((v) => ({ value: v.value, name: v.name })),
+      })),
+    });
   }
 
   private async postError(error: unknown): Promise<void> {

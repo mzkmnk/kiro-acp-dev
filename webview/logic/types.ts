@@ -1,8 +1,21 @@
+/**
+ * Minimal session metadata used for the session switcher UI.
+ * セッション切り替え UI で使用する最小限のセッションメタデータ。
+ */
+export interface SessionInfo {
+  sessionId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type WebviewToExtensionMessage =
   | { type: 'prompt'; text: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
-  | { type: 'permissionResponse'; id: number; optionId: string };
+  | { type: 'switchSession'; sessionId: string }
+  | { type: 'permissionResponse'; id: number; optionId: string }
+  | { type: 'setConfigOption'; configId: string; value: string };
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
@@ -32,9 +45,24 @@ export type ExtensionToWebviewMessage =
     }
   | { type: 'turnEnd' }
   | { type: 'error'; message: string }
-  | { type: 'ready'; agentInfo: { name: string; version: string } };
+  | { type: 'ready'; agentInfo: { name: string; version: string } }
+  | {
+      type: 'configOptions';
+      options: ConfigOptionState[];
+    }
+  | { type: 'sessionStatus'; status: string; message: string }
+  | { type: 'sessionList'; sessions: SessionInfo[]; currentSessionId?: string }
+  | { type: 'sessionSwitched'; sessionId: string; items: ChatItem[] };
 
 export type ChatRole = 'user' | 'agent' | 'system' | 'error' | 'tool' | 'permission';
+
+export interface ConfigOptionState {
+  id: string;
+  name: string;
+  category?: string;
+  currentValue: string;
+  values: Array<{ value: string; name: string }>;
+}
 
 export interface ChatItem {
   id: string;
@@ -60,4 +88,8 @@ export interface ChatState {
   queue: QueuedPrompt[];
   statusText: string;
   streaming: boolean;
+  configOptions: ConfigOptionState[];
+  sessions: SessionInfo[];
+  currentSessionId?: string;
+  ready: boolean;
 }

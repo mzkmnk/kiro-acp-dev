@@ -7,16 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      lucide-react:
-        specifier: ^0.576.0
-        version: 0.576.0(react@19.2.4)
-      react:
-        specifier: ^19.2.4
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.2.4
-        version: 19.2.4(react@19.2.4)
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.2.1
@@ -51,6 +41,9 @@ importers:
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
+      lucide-react:
+        specifier: ^0.576.0
+        version: 0.576.0(react@19.2.4)
       marked:
         specifier: ^17.0.1
         version: 17.0.3
@@ -66,6 +59,12 @@ importers:
       prettier:
         specifier: latest
         version: 3.8.1
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
       tailwindcss:
         specifier: ^4.2.1
         version: 4.2.1
