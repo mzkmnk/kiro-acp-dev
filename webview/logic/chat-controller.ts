@@ -4,6 +4,7 @@ import type {
   ConfigOptionState,
   ExtensionToWebviewMessage,
   QueuedPrompt,
+  SessionInfo,
 } from './types';
 import { getVsCodeApi } from './vscode-api';
 
@@ -32,6 +33,8 @@ export class ChatController {
     statusText: 'Connecting...',
     streaming: false,
     configOptions: [],
+    sessions: [],
+    currentSessionId: undefined,
   };
 
   private activeAgentMessageId?: string;
@@ -114,6 +117,20 @@ export class ChatController {
     this.activeAgentMessageId = undefined;
     this.inFlightTurns = 0;
     this.setState({ items: [], queue: [], streaming: false, configOptions: [] });
+  }
+
+  /**
+   * Requests switching to an existing session by ID.
+   * 既存セッション ID を指定してセッション切り替えを要求します。
+   *
+   * @param sessionId - Target session ID.
+   *                    切り替え先のセッション ID。
+   */
+  public switchSession(sessionId: string): void {
+    this.vscode.postMessage({ type: 'switchSession', sessionId });
+    this.activeAgentMessageId = undefined;
+    this.inFlightTurns = 0;
+    this.setState({ items: [], queue: [], streaming: false });
   }
 
   /**
@@ -293,6 +310,22 @@ export class ChatController {
           this.inFlightTurns = 0;
           this.setState({ streaming: false });
         }
+        return;
+      case 'sessionList':
+        this.setState({
+          sessions: message.sessions,
+          currentSessionId: message.currentSessionId,
+        });
+        return;
+      case 'sessionSwitched':
+        this.activeAgentMessageId = undefined;
+        this.inFlightTurns = 0;
+        this.setState({
+          items: message.items as ChatItem[],
+          queue: [],
+          streaming: false,
+          currentSessionId: message.sessionId,
+        });
         return;
     }
   }

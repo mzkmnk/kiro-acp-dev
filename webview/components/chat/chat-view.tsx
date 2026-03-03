@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Check,
   Loader2,
+  History,
 } from 'lucide-react';
 import hljs from 'highlight.js/lib/core';
 import plaintext from 'highlight.js/lib/languages/plaintext';
@@ -20,7 +21,7 @@ import bash from 'highlight.js/lib/languages/bash';
 import markdown from 'highlight.js/lib/languages/markdown';
 import { Marked } from 'marked';
 
-import type { ChatItem, ConfigOptionState, QueuedPrompt } from '../../logic/types';
+import type { ChatItem, ConfigOptionState, QueuedPrompt, SessionInfo } from '../../logic/types';
 
 hljs.registerLanguage('plaintext', plaintext);
 hljs.registerLanguage('text', plaintext);
@@ -71,9 +72,12 @@ export interface ChatViewProps {
   queue: QueuedPrompt[];
   streaming: boolean;
   configOptions: ConfigOptionState[];
+  sessions: SessionInfo[];
+  currentSessionId?: string;
   onSubmitPrompt: (text: string) => void;
   onCancel: () => void;
   onNewSession: () => void;
+  onSwitchSession: (sessionId: string) => void;
   onSendQueuedNow: (queuedPromptId: string) => void;
   onRemoveQueued: (queuedPromptId: string) => void;
   onPermissionResponse: (requestId: number, optionId: string) => void;
@@ -85,9 +89,12 @@ export function ChatView({
   queue,
   streaming,
   configOptions,
+  sessions,
+  currentSessionId,
   onSubmitPrompt,
   onCancel,
   onNewSession,
+  onSwitchSession,
   onSendQueuedNow,
   onRemoveQueued,
   onPermissionResponse,
@@ -96,6 +103,8 @@ export function ChatView({
   const [prompt, setPrompt] = React.useState('');
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [sessionListOpen, setSessionListOpen] = React.useState(false);
+  const sessionListRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (!scrollRef.current) {
@@ -119,18 +128,74 @@ export function ChatView({
     setPrompt('');
   };
 
+  React.useEffect(() => {
+    if (!sessionListOpen) {
+      return;
+    }
+    const handleClick = (e: MouseEvent) => {
+      if (sessionListRef.current && !sessionListRef.current.contains(e.target as Node)) {
+        setSessionListOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [sessionListOpen]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-(--vscode-sideBar-background) text-(--vscode-sideBar-foreground)">
       <header className="sticky top-0 z-10 bg-(--vscode-sideBar-background)/95 px-3 py-2 backdrop-blur">
-        <div className="flex items-center justify-end gap-1">
+        <div className="relative flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => setSessionListOpen(!sessionListOpen)}
+            title="Switch session"
+            className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground)"
+          >
+            <History className="h-4 w-4" />
+          </button>
           <button
             type="button"
             onClick={onNewSession}
             title="New chat"
-            className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground) hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)] hover:text-(--vscode-editor-foreground)"
+            className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground)"
           >
             <Plus className="h-4 w-4" />
           </button>
+          {sessionListOpen ? (
+            <div
+              ref={sessionListRef}
+              className="absolute right-0 top-full z-20 mt-1 max-h-64 w-full min-w-0 overflow-y-auto rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg"
+            >
+              {sessions.length > 0 ? (
+                sessions.map((s) => (
+                  <button
+                    key={s.sessionId}
+                    type="button"
+                    onClick={() => {
+                      if (s.sessionId !== currentSessionId) {
+                        onSwitchSession(s.sessionId);
+                      }
+                      setSessionListOpen(false);
+                    }}
+                    className={`flex w-full cursor-pointer flex-col gap-0.5 px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)] ${
+                      s.sessionId === currentSessionId
+                        ? 'text-(--vscode-textLink-foreground)'
+                        : 'text-(--vscode-editor-foreground)'
+                    }`}
+                  >
+                    <span className="line-clamp-1 text-[12px]">{s.title}</span>
+                    <span className="text-[10px] text-(--vscode-descriptionForeground)">
+                      {new Date(s.updatedAt).toLocaleString()}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p className="px-3 py-1.5 text-[12px] text-(--vscode-descriptionForeground)">
+                  No sessions
+                </p>
+              )}
+            </div>
+          ) : null}
         </div>
       </header>
 

@@ -1,7 +1,19 @@
+/**
+ * Minimal session metadata used for the session switcher UI.
+ * セッション切り替え UI で使用する最小限のセッションメタデータ。
+ */
+export interface SessionInfo {
+  sessionId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type WebviewToExtensionMessage =
   | { type: 'prompt'; text: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
+  | { type: 'switchSession'; sessionId: string }
   | { type: 'permissionResponse'; id: number; optionId: string }
   | { type: 'setConfigOption'; configId: string; value: string };
 
@@ -38,7 +50,9 @@ export type ExtensionToWebviewMessage =
       type: 'configOptions';
       options: ConfigOptionState[];
     }
-  | { type: 'sessionStatus'; status: string; message: string };
+  | { type: 'sessionStatus'; status: string; message: string }
+  | { type: 'sessionList'; sessions: SessionInfo[]; currentSessionId?: string }
+  | { type: 'sessionSwitched'; sessionId: string; items: ChatItem[] };
 
 export type ChatRole = 'user' | 'agent' | 'system' | 'error' | 'tool' | 'permission';
 
@@ -75,4 +89,6 @@ export interface ChatState {
   statusText: string;
   streaming: boolean;
   configOptions: ConfigOptionState[];
+  sessions: SessionInfo[];
+  currentSessionId?: string;
 }

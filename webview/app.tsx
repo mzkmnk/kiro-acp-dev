@@ -12,9 +12,12 @@ export function App(): React.JSX.Element {
       queue={state.queue}
       streaming={state.streaming}
       configOptions={state.configOptions}
+      sessions={state.sessions}
+      currentSessionId={state.currentSessionId}
       onSubmitPrompt={(text) => controller.sendPrompt(text)}
       onCancel={() => controller.cancel()}
       onNewSession={() => controller.newSession()}
+      onSwitchSession={(sessionId) => controller.switchSession(sessionId)}
       onSendQueuedNow={(id) => controller.sendQueuedPromptNow(id)}
       onRemoveQueued={(id) => controller.removeQueuedPrompt(id)}
       onPermissionResponse={(requestId, optionId) =>
