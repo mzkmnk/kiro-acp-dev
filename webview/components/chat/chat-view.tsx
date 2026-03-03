@@ -203,6 +203,9 @@ export function ChatView({
                     }`}
                   >
                     <span className="line-clamp-1 text-[12px]">{s.title}</span>
+                    <span className="line-clamp-1 text-[10px] text-(--vscode-descriptionForeground)">
+                      {s.cwd}
+                    </span>
                     <span className="text-[10px] text-(--vscode-descriptionForeground)">
                       {new Date(s.updatedAt).toLocaleString()}
                     </span>

@@ -68,6 +68,7 @@ export type ExtensionToWebviewMessage =
       sessions: Array<{
         sessionId: string;
         title: string;
+        cwd: string;
         createdAt: string;
         updatedAt: string;
       }>;
@@ -397,6 +398,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     let sessions: Array<{
       sessionId: string;
       title: string;
+      cwd: string;
       createdAt: string;
       updatedAt: string;
     }> = [];
@@ -421,6 +423,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
             return {
               sessionId: meta.session_id,
               title,
+              cwd: meta.cwd,
               createdAt: meta.created_at,
               updatedAt: meta.updated_at,
             };
