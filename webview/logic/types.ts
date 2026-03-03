@@ -5,12 +5,13 @@
 export interface SessionInfo {
   sessionId: string;
   title: string;
+  cwd: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export type WebviewToExtensionMessage =
-  | { type: 'prompt'; text: string }
+  | { type: 'prompt'; text: string; modeId?: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
   | { type: 'switchSession'; sessionId: string }

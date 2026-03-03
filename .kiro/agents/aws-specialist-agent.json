@@ -1,0 +1,32 @@
+{
+  "name": "aws-specialist-agent",
+  "description": "Specialized custom agent for AWS infrastructure and development tasks",
+  "prompt": "You are an expert AWS infrastructure specialist with deep knowledge of cloud architecture and best practices",
+  "tools": ["read", "write", "shell", "aws"],
+  "allowedTools": ["read", "aws"],
+  "toolsSettings": {
+    "aws": {
+      "allowedServices": ["s3", "lambda", "cloudformation", "ec2", "iam", "logs"]
+    },
+    "write": {
+      "allowedPaths": ["infrastructure/**", "scripts/**", "*.yaml", "*.yml", "*.json"]
+    }
+  },
+  "resources": [
+    "file://README.md",
+    "file://infrastructure/**/*.yaml",
+    "file://infrastructure/**/*.yml",
+    "file://docs/aws-setup.md",
+    "file://scripts/deploy.sh"
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "aws sts get-caller-identity",
+        "timeout_ms": 10000,
+        "cache_ttl_seconds": 300
+      }
+    ]
+  },
+  "model": "claude-sonnet-4"
+}

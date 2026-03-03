@@ -16,7 +16,7 @@ import type {
 } from '../acp/types';
 
 export type WebviewToExtensionMessage =
-  | { type: 'prompt'; text: string }
+  | { type: 'prompt'; text: string; modeId?: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
   | { type: 'switchSession'; sessionId: string }
@@ -68,6 +68,7 @@ export type ExtensionToWebviewMessage =
       sessions: Array<{
         sessionId: string;
         title: string;
+        cwd: string;
         createdAt: string;
         updatedAt: string;
       }>;
@@ -227,6 +228,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
           }
 
           const sessionId = await this.ensureSession();
+          if (message.modeId) {
+            await this.applyConfigOption(sessionId, 'mode', message.modeId);
+          }
           await this.acpClient.prompt(sessionId, [{ type: 'text', text }]);
           await this.postMessage({ type: 'turnEnd' });
           return;
@@ -394,6 +398,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     let sessions: Array<{
       sessionId: string;
       title: string;
+      cwd: string;
       createdAt: string;
       updatedAt: string;
     }> = [];
@@ -418,6 +423,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
             return {
               sessionId: meta.session_id,
               title,
+              cwd: meta.cwd,
               createdAt: meta.created_at,
               updatedAt: meta.updated_at,
             };
@@ -428,9 +434,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       );
 
       sessions = entries
-        .filter(
-          (e): e is NonNullable<typeof e> => e !== undefined,
-        )
+        .filter((e): e is NonNullable<typeof e> => e !== undefined)
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     } catch {
       // Directory may not exist yet.

@@ -12,6 +12,8 @@ import {
   Check,
   Loader2,
   History,
+  Cpu,
+  Bot,
 } from 'lucide-react';
 import hljs from 'highlight.js/lib/core';
 import plaintext from 'highlight.js/lib/languages/plaintext';
@@ -107,6 +109,20 @@ export function ChatView({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [sessionListOpen, setSessionListOpen] = React.useState(false);
   const sessionListRef = React.useRef<HTMLDivElement>(null);
+  const footerRef = React.useRef<HTMLDivElement>(null);
+  const [compactSelectors, setCompactSelectors] = React.useState(false);
+
+  React.useEffect(() => {
+    const el = footerRef.current;
+    if (!el) {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      setCompactSelectors(entry.contentRect.width < 340);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     if (!scrollRef.current) {
@@ -147,59 +163,63 @@ export function ChatView({
     <div className="flex h-full flex-col overflow-hidden bg-(--vscode-sideBar-background) text-(--vscode-sideBar-foreground)">
       <header className="sticky top-0 z-10 bg-(--vscode-sideBar-background)/95 px-3 py-2 backdrop-blur">
         {ready ? (
-        <div className="relative flex items-center justify-end gap-1">
-          <button
-            type="button"
-            onClick={() => setSessionListOpen(!sessionListOpen)}
-            title="Switch session"
-            className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
-          >
-            <History className="h-3.5 w-3.5" strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            onClick={onNewSession}
-            title="New chat"
-            className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
-          </button>
-          {sessionListOpen ? (
-            <div
-              ref={sessionListRef}
-              className="absolute right-0 top-full z-20 mt-1 max-h-64 w-full min-w-0 overflow-y-auto rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg"
+          <div className="relative flex items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => setSessionListOpen(!sessionListOpen)}
+              title="Switch session"
+              className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-(--vscode-descriptionForeground)"
             >
-              {sessions.length > 0 ? (
-                sessions.map((s) => (
-                  <button
-                    key={s.sessionId}
-                    type="button"
-                    onClick={() => {
-                      if (s.sessionId !== currentSessionId) {
-                        onSwitchSession(s.sessionId);
-                      }
-                      setSessionListOpen(false);
-                    }}
-                    className={`flex w-full cursor-pointer flex-col gap-0.5 px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)] ${
-                      s.sessionId === currentSessionId
-                        ? 'text-(--vscode-textLink-foreground)'
-                        : 'text-(--vscode-editor-foreground)'
-                    }`}
-                  >
-                    <span className="line-clamp-1 text-[12px]">{s.title}</span>
-                    <span className="text-[10px] text-(--vscode-descriptionForeground)">
-                      {new Date(s.updatedAt).toLocaleString()}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <p className="px-3 py-1.5 text-[12px] text-(--vscode-descriptionForeground)">
-                  No sessions
-                </p>
-              )}
-            </div>
-          ) : null}
-        </div>
+              <History className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              onClick={onNewSession}
+              disabled={items.length === 0}
+              title="New chat"
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-(--vscode-descriptionForeground) disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+            {sessionListOpen ? (
+              <div
+                ref={sessionListRef}
+                className="absolute right-0 top-full z-20 mt-1 max-h-64 w-full min-w-0 overflow-y-auto rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg"
+              >
+                {sessions.length > 0 ? (
+                  sessions.map((s) => (
+                    <button
+                      key={s.sessionId}
+                      type="button"
+                      onClick={() => {
+                        if (s.sessionId !== currentSessionId) {
+                          onSwitchSession(s.sessionId);
+                        }
+                        setSessionListOpen(false);
+                      }}
+                      className={`flex w-full cursor-pointer flex-col gap-0.5 px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)] ${
+                        s.sessionId === currentSessionId
+                          ? 'text-(--vscode-textLink-foreground)'
+                          : 'text-(--vscode-editor-foreground)'
+                      }`}
+                    >
+                      <span className="line-clamp-1 text-[12px]">{s.title}</span>
+                      <span className="line-clamp-1 text-[10px] text-(--vscode-descriptionForeground)">
+                        {s.cwd}
+                      </span>
+                      <span className="text-[10px] text-(--vscode-descriptionForeground)">
+                        {new Date(s.updatedAt).toLocaleString()}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-3 py-1.5 text-[12px] text-(--vscode-descriptionForeground)">
+                    No sessions
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </header>
 
@@ -291,21 +311,22 @@ export function ChatView({
             className="max-h-55 min-h-11 w-full resize-none rounded-2xl border border-transparent bg-[color-mix(in_srgb,var(--vscode-editor-background)_78%,#c7ccda_22%)] px-4 py-3 text-[13px] text-(--vscode-editor-foreground) outline-none"
           />
 
-          <div className="flex items-center justify-between gap-2">
+          <div ref={footerRef} className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-[12px] text-(--vscode-descriptionForeground)">
               <button
                 type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_72%,#c5cad7_28%)]"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_72%,#c5cad7_28%)]"
                 title="Add context"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>
               {configOptions
-                .filter((opt) => opt.category === 'model')
+                .filter((opt) => opt.category === 'model' || opt.category === 'mode')
                 .map((opt) => (
                   <ModelSelector
                     key={opt.id}
                     option={opt}
+                    compact={compactSelectors}
                     onChange={(value) => onSetConfigOption(opt.id, value)}
                   />
                 ))}
@@ -327,12 +348,12 @@ export function ChatView({
                     ? 'Queue prompt'
                     : 'Send prompt'
               }
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--vscode-panel-border)_70%,#a5aabd_30%)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_65%,#9ea4b8_35%)] text-(--vscode-editor-foreground) disabled:opacity-50"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--vscode-panel-border)_70%,#a5aabd_30%)] bg-[color-mix(in_srgb,var(--vscode-editor-background)_65%,#9ea4b8_35%)] text-(--vscode-editor-foreground) disabled:opacity-50"
             >
               {streaming && !prompt.trim() ? (
-                <Square className="h-4 w-4" />
+                <Square className="h-3.5 w-3.5" strokeWidth={1.5} />
               ) : (
-                <ArrowUp className="h-4 w-4" />
+                <ArrowUp className="h-3.5 w-3.5" strokeWidth={1.5} />
               )}
             </button>
           </div>
@@ -501,15 +522,18 @@ function PermissionRow({
 
 function ModelSelector({
   option,
+  compact,
   onChange,
 }: {
   option: ConfigOptionState;
+  compact?: boolean;
   onChange: (value: string) => void;
 }): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   const currentLabel =
     option.values.find((v) => v.value === option.currentValue)?.name ?? option.currentValue;
+  const Icon = option.category === 'mode' ? Bot : Cpu;
 
   React.useEffect(() => {
     if (!open) {
@@ -529,10 +553,17 @@ function ModelSelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        title={currentLabel}
         className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1"
       >
-        {currentLabel}
-        <ChevronDown className="h-3.5 w-3.5" />
+        {compact ? (
+          <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+        ) : (
+          <>
+            {currentLabel}
+            <ChevronDown className="h-3.5 w-3.5" />
+          </>
+        )}
       </button>
       {open ? (
         <div className="absolute bottom-full left-0 z-20 mb-1 min-w-40 rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg">

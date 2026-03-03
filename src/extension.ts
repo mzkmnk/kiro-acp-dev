@@ -9,7 +9,8 @@ let acpClient: AcpClient | undefined;
 export function activate(context: vscode.ExtensionContext) {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir();
 
-  acpClient = new AcpClient();
+  acpClient = new AcpClient({ cwd: workspaceFolder });
+  void acpClient.cleanupStaleProcess();
   const provider = new ChatViewProvider(context.extensionUri, acpClient, workspaceFolder, context);
 
   context.subscriptions.push(
