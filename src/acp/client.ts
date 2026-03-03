@@ -37,7 +37,7 @@ type PendingRequest = {
   /** Promise rejecter for error/timeout. / エラーまたはタイムアウト時の Promise reject。 */
   reject: (reason?: unknown) => void;
   /** Timeout handle for the request. / リクエストのタイムアウトハンドル。 */
-  timeoutHandle: NodeJS.Timeout;
+  timeoutHandle?: NodeJS.Timeout;
 };
 
 /**
@@ -281,7 +281,8 @@ export class AcpClient {
     }
 
     this.outputChannel.appendLine(`Starting ACP process: ${this.cliPath} acp`);
-    this.process = spawn(this.cliPath, ['acp'], {
+    // TODO: Allow users to configure the agent name (e.g., via settings).
+    this.process = spawn(this.cliPath, ['acp', '--agent', 'kiro_default'], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.stdoutBuffer = '';
@@ -467,11 +468,15 @@ export class AcpClient {
       params,
     };
 
+    const noTimeout = method === 'session/prompt';
+
     return new Promise<TResponse>((resolve, reject) => {
-      const timeoutHandle = setTimeout(() => {
-        this.pendingRequests.delete(id);
-        reject(createRequestTimeoutError(method, id));
-      }, this.requestTimeoutMs);
+      const timeoutHandle = noTimeout
+        ? undefined
+        : setTimeout(() => {
+            this.pendingRequests.delete(id);
+            reject(createRequestTimeoutError(method, id));
+          }, this.requestTimeoutMs);
 
       this.pendingRequests.set(id, {
         resolve: (value) => resolve(value as TResponse),
@@ -480,7 +485,9 @@ export class AcpClient {
       });
 
       this.writeMessage(request).catch((error) => {
-        clearTimeout(timeoutHandle);
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+        }
         this.pendingRequests.delete(id);
         reject(error);
       });

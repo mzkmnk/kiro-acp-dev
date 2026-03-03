@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Square, Plus, ArrowUp, Wrench, Play, X, ChevronDown } from 'lucide-react';
+import { Square, Plus, ArrowUp, Wrench, Play, X, ChevronDown, Shield, ChevronRight, Check, Loader2 } from 'lucide-react';
 import hljs from 'highlight.js/lib/core';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import typescript from 'highlight.js/lib/languages/typescript';
@@ -104,7 +104,7 @@ export function ChatView({
   };
 
   return (
-    <div className="relative h-full overflow-hidden bg-(--vscode-sideBar-background) text-(--vscode-sideBar-foreground)">
+    <div className="flex h-full flex-col overflow-hidden bg-(--vscode-sideBar-background) text-(--vscode-sideBar-foreground)">
       <header className="sticky top-0 z-10 bg-(--vscode-sideBar-background)/95 px-3 py-2 backdrop-blur">
         <div className="flex items-center justify-end gap-1">
           <button
@@ -118,22 +118,26 @@ export function ChatView({
         </div>
       </header>
 
-      <div ref={scrollRef} className="h-[calc(100%-132px)] overflow-y-auto px-3 py-3">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <div className="space-y-2.5">
           {items.map((item) => (
             <MessageRow key={item.id} item={item} onPermissionResponse={onPermissionResponse} />
           ))}
         </div>
 
-        {streaming ? (
-          <div className="mt-2 inline-flex items-center gap-2 text-xs text-(--vscode-descriptionForeground)">
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-(--vscode-textLink-foreground) before:absolute before:inset-0 before:animate-ping before:rounded-full before:bg-(--vscode-textLink-foreground)" />
-            Kiro is thinking...
-          </div>
+        {streaming &&
+        items.length > 0 &&
+        items[items.length - 1].role !== 'agent' &&
+        !items.some(
+          (i) =>
+            (i.role === 'tool' || i.role === 'permission') &&
+            (i.toolStatus === 'running' || i.toolStatus === 'pending' || !i.toolStatus),
+        ) ? (
+          <p className="mt-2 text-xs text-(--vscode-descriptionForeground)">thinking...</p>
         ) : null}
       </div>
 
-      <footer className="absolute inset-x-0 bottom-0 bg-(--vscode-sideBar-background) p-3">
+      <footer className="shrink-0 bg-(--vscode-sideBar-background) p-3">
         {queue.length > 0 ? (
           <section className="mb-2 rounded-md border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_88%,black_4%)] p-2">
             <p className="mb-1 text-[11px] text-(--vscode-descriptionForeground)">
@@ -180,6 +184,9 @@ export function ChatView({
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) {
+                return;
+              }
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 event.currentTarget.form?.requestSubmit();
@@ -202,7 +209,6 @@ export function ChatView({
                 auto
                 <ChevronDown className="h-3.5 w-3.5" />
               </span>
-              <span>{streaming ? 'Generating... New send will be queued.' : 'Ready'}</span>
             </div>
 
             <button
@@ -281,26 +287,34 @@ function MessageRow({
 
 function ToolCallRow({ item }: { item: ChatItem }): React.JSX.Element {
   const status = item.toolStatus ?? 'pending';
-  const badgeColor =
-    status === 'completed'
-      ? 'bg-emerald-600/20 text-emerald-300'
-      : status === 'failed'
-        ? 'bg-red-600/20 text-red-300'
-        : status === 'running'
-          ? 'bg-sky-600/20 text-sky-300'
-          : 'bg-amber-600/20 text-amber-300';
+  const [open, setOpen] = React.useState(false);
+
+  const statusIcon =
+    status === 'completed' ? (
+      <Check className="h-3 w-3 text-emerald-400" />
+    ) : status === 'failed' ? (
+      <X className="h-3 w-3 text-red-400" />
+    ) : (
+      <Loader2 className="h-3 w-3 animate-spin text-(--vscode-descriptionForeground)" />
+    );
 
   return (
-    <article className="flex w-full justify-start">
-      <details className="w-[88%] rounded-xl border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_86%,white_4%)] px-3 py-2 text-[12px] leading-relaxed text-(--vscode-descriptionForeground)">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-          <span className="font-medium text-(--vscode-editor-foreground)">{item.toolName}</span>
-          <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${badgeColor}`}>
-            {status}
-          </span>
-        </summary>
-        {item.text ? <pre className="mt-2 overflow-x-auto whitespace-pre-wrap">{item.text}</pre> : null}
-      </details>
+    <article className="text-[12px] text-(--vscode-descriptionForeground)">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5"
+      >
+        <ChevronRight className={`h-3 w-3 transition-transform ${open ? 'rotate-90' : ''}`} />
+        {statusIcon}
+        <span>{item.toolName}</span>
+      </button>
+      {open ? (
+        <div className="mt-1 ml-6 max-h-56 overflow-auto rounded-md bg-[color-mix(in_srgb,var(--vscode-editor-background)_90%,black_10%)] p-2 text-[11px] whitespace-pre-wrap">
+          {item.toolTitle ? <p>{item.toolTitle}</p> : null}
+          {item.text ? <pre className="whitespace-pre-wrap">{item.text}</pre> : null}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -312,19 +326,41 @@ function PermissionRow({
   item: ChatItem;
   onPermissionResponse: (requestId: number, optionId: string) => void;
 }): React.JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  const status = item.toolStatus;
+  const resolvedLabel = item.resolved
+    ? (item.permissionOptions ?? []).find((o) => o.optionId === item.resolvedOptionId)?.label ??
+      item.resolvedOptionId
+    : undefined;
+
+  const statusIcon = status
+    ? status === 'completed'
+      ? <Check className="h-3 w-3 text-emerald-400" />
+      : status === 'failed'
+        ? <X className="h-3 w-3 text-red-400" />
+        : <Loader2 className="h-3 w-3 animate-spin" />
+    : null;
+
   return (
-    <article className="flex w-full justify-start">
-      <section className="w-[88%] rounded-xl border border-(--vscode-panel-border) bg-[color-mix(in_srgb,var(--vscode-editor-background)_86%,white_4%)] px-3 py-2 text-[12px]">
-        <h3 className="text-xs font-semibold text-(--vscode-editor-foreground)">
-          Permission required: {item.toolName}
-        </h3>
-        <pre className="mt-2 max-h-56 overflow-auto rounded border border-(--vscode-panel-border) p-2 text-[11px] whitespace-pre-wrap">
-          {item.text}
-        </pre>
+    <article className="text-[12px] text-(--vscode-descriptionForeground)">
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="inline-flex cursor-pointer items-center gap-1.5 px-1.5 py-0.5"
+        >
+          <ChevronRight className={`h-3 w-3 transition-transform ${open ? 'rotate-90' : ''}`} />
+          {statusIcon ?? <Shield className="h-3 w-3 text-amber-400" />}
+          <span>{item.toolName}</span>
+        </button>
+
         {item.resolved ? (
-          <p className="mt-2 text-[11px] text-(--vscode-descriptionForeground)">Resolved</p>
+          <span className="inline-flex items-center gap-1 text-[11px]">
+            <Check className="h-3 w-3 text-emerald-400" />
+            {resolvedLabel}
+          </span>
         ) : (
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="inline-flex items-center gap-0.5">
             {(item.permissionOptions ?? []).map((option) => (
               <button
                 key={option.optionId}
@@ -334,14 +370,21 @@ function PermissionRow({
                     onPermissionResponse(item.permissionRequestId, option.optionId);
                   }
                 }}
-                className="rounded border border-(--vscode-panel-border) px-2 py-1 text-[11px] hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)]"
+                className="rounded-md px-2 py-0.5 text-[11px] font-medium text-(--vscode-textLink-foreground) hover:bg-[color-mix(in_srgb,var(--vscode-textLink-foreground)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--vscode-textLink-foreground)_18%,transparent)]"
               >
                 {option.label}
               </button>
             ))}
           </div>
         )}
-      </section>
+      </div>
+
+      {open ? (
+        <div className="mt-1 ml-6 max-h-56 overflow-auto rounded-md bg-[color-mix(in_srgb,var(--vscode-editor-background)_90%,black_10%)] p-2 text-[11px] whitespace-pre-wrap">
+          {item.toolTitle ? <p>{item.toolTitle}</p> : null}
+          {item.text ? <pre className="whitespace-pre-wrap">{item.text}</pre> : null}
+        </div>
+      ) : null}
     </article>
   );
 }

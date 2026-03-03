@@ -117,7 +117,7 @@ export class ChatController {
     this.vscode.postMessage({ type: 'permissionResponse', id: requestId, optionId });
     this.setState({
       items: this.state.items.map((item) =>
-        item.id === target.id ? { ...item, resolved: true, text: `${item.text}\nSelected: ${optionId}` } : item,
+        item.id === target.id ? { ...item, resolved: true, resolvedOptionId: optionId } : item,
       ),
     });
   }
@@ -181,22 +181,44 @@ export class ChatController {
         this.queueAgentChunk(message.text);
         return;
       case 'toolCall':
-        this.upsertToolCall(message.toolCallId, message.name, message.status, message.content);
+        this.upsertToolCall(message.toolCallId, message.name, message.title, message.status, message.content);
         return;
       case 'toolCallUpdate':
-        this.upsertToolCall(message.toolCallId, message.name, message.status, message.content);
+        this.upsertToolCall(message.toolCallId, message.name, message.title, message.status, message.content);
         return;
-      case 'requestPermission':
-        this.pushItem({
-          id: this.createId(),
-          role: 'permission',
-          text: message.params,
-          toolName: message.toolName,
-          permissionRequestId: message.id,
-          permissionOptions: message.options,
-          resolved: false,
-        });
+      case 'requestPermission': {
+        this.flushPendingAgentChunk();
+        this.activeAgentMessageId = undefined;
+
+        const existingIdx = this.state.items.findIndex(
+          (i) => i.role === 'tool' && i.toolCallId === message.toolCallId,
+        );
+
+        if (existingIdx >= 0) {
+          const nextItems = [...this.state.items];
+          nextItems[existingIdx] = {
+            ...nextItems[existingIdx],
+            role: 'permission',
+            text: message.params,
+            permissionRequestId: message.id,
+            permissionOptions: message.options,
+            resolved: false,
+          };
+          this.setState({ items: nextItems });
+        } else {
+          this.pushItem({
+            id: this.createId(),
+            role: 'permission',
+            text: message.params,
+            toolCallId: message.toolCallId,
+            toolName: message.toolName,
+            permissionRequestId: message.id,
+            permissionOptions: message.options,
+            resolved: false,
+          });
+        }
         return;
+      }
       case 'turnEnd':
         this.flushPendingAgentChunk();
         this.activeAgentMessageId = undefined;
@@ -272,10 +294,14 @@ export class ChatController {
     this.vscode.postMessage({ type: 'prompt', text });
   }
 
-  private upsertToolCall(toolCallId: string, name: string, status: string, content: string): void {
+  private upsertToolCall(toolCallId: string, name: string, title: string, status: string, content: string): void {
+    this.flushPendingAgentChunk();
+    this.activeAgentMessageId = undefined;
+
     const normalizedStatus = status === 'in_progress' ? 'running' : status;
+
     const existingIndex = this.state.items.findIndex(
-      (item) => item.role === 'tool' && item.toolCallId === toolCallId,
+      (item) => (item.role === 'tool' || item.role === 'permission') && item.toolCallId === toolCallId,
     );
 
     if (existingIndex < 0) {
@@ -286,6 +312,7 @@ export class ChatController {
         toolCallId,
         toolStatus: normalizedStatus,
         toolName: name,
+        toolTitle: title,
       });
       return;
     }
@@ -294,9 +321,10 @@ export class ChatController {
     const existing = nextItems[existingIndex];
     nextItems[existingIndex] = {
       ...existing,
+      toolStatus: normalizedStatus || existing.toolStatus,
       text: content || existing.text,
       toolName: name || existing.toolName,
-      toolStatus: normalizedStatus || existing.toolStatus,
+      toolTitle: title || existing.toolTitle,
     };
     this.setState({ items: nextItems });
   }

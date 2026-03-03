@@ -18,11 +18,12 @@ export type WebviewToExtensionMessage =
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
-  | { type: 'toolCall'; toolCallId: string; name: string; status: string; content: string }
-  | { type: 'toolCallUpdate'; toolCallId: string; name: string; status: string; content: string }
+  | { type: 'toolCall'; toolCallId: string; name: string; title: string; status: string; content: string }
+  | { type: 'toolCallUpdate'; toolCallId: string; name: string; title: string; status: string; content: string }
   | {
       type: 'requestPermission';
       id: number;
+      toolCallId: string;
       toolName: string;
       params: string;
       options: Array<{ optionId: string; label: string }>;
@@ -242,7 +243,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         await this.postMessage({
           type: 'toolCall',
           toolCallId: update.toolCallId,
-          name: update.title,
+          name: this.toolDisplayName(update.kind, update.rawInput),
+          title: update.title ?? '',
           status: this.normalizeToolCallStatus(update.status),
           content: this.renderToolCallUpdateContent(update.content),
         });
@@ -252,7 +254,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         await this.postMessage({
           type: 'toolCallUpdate',
           toolCallId: update.toolCallId,
-          name: update.title ?? 'tool',
+          name: this.toolDisplayName(update.kind, update.rawInput),
+          title: update.title ?? '',
           status: this.normalizeToolCallStatus(update.status),
           content: this.renderToolCallUpdateContent(update.content),
         });
@@ -289,11 +292,35 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     return status === 'in_progress' ? 'running' : status;
   }
 
+  private toolKindLabel(kind: string | undefined): string {
+    switch (kind) {
+      case 'read': return 'read';
+      case 'edit': return 'edit';
+      case 'delete': return 'delete';
+      case 'move': return 'move';
+      case 'search': return 'search';
+      case 'execute': return 'shell';
+      case 'think': return 'think';
+      case 'fetch': return 'fetch';
+      default: return 'tool';
+    }
+  }
+
+  private toolDisplayName(kind: string | undefined, rawInput: unknown): string {
+    const label = this.toolKindLabel(kind);
+    const purpose =
+      rawInput && typeof rawInput === 'object' && '__tool_use_purpose' in rawInput
+        ? String((rawInput as Record<string, unknown>).__tool_use_purpose)
+        : undefined;
+    return purpose ? `${label}(${purpose})` : label;
+  }
+
   private async handlePermissionRequest(
     params: SessionRequestPermissionParams,
   ): Promise<SessionRequestPermissionResult> {
     const optionId = await this.waitForPermissionDecision({
       id: this.createRequestId(),
+      toolCallId: params.toolCall.toolCallId,
       toolName: params.toolCall.title ?? 'tool',
       paramSummary: this.renderPermissionParams(params.toolCall.rawInput),
       options: params.options.map((option) => ({
@@ -312,6 +339,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
 
   private async waitForPermissionDecision(request: {
     id: number;
+    toolCallId: string;
     toolName: string;
     paramSummary: string;
     options: Array<{ optionId: string; label: string }>;
@@ -319,13 +347,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     await this.postMessage({
       type: 'requestPermission',
       id: request.id,
+      toolCallId: request.toolCallId,
       toolName: request.toolName,
       params: request.paramSummary,
       options: request.options,
     });
 
+    const rejectOptionId =
+      request.options.find((o) => o.optionId.startsWith('reject'))?.optionId ?? 'reject_once';
+
     return new Promise<string>((resolve) => {
-      this.pendingPermissionRequests.set(request.id, resolve);
+      const timeoutHandle = setTimeout(() => {
+        this.pendingPermissionRequests.delete(request.id);
+        resolve(rejectOptionId);
+      }, 120_000);
+
+      this.pendingPermissionRequests.set(request.id, (optionId) => {
+        clearTimeout(timeoutHandle);
+        resolve(optionId);
+      });
     });
   }
 

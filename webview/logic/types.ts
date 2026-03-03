@@ -6,11 +6,12 @@ export type WebviewToExtensionMessage =
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
-  | { type: 'toolCall'; toolCallId: string; name: string; status: string; content: string }
-  | { type: 'toolCallUpdate'; toolCallId: string; name: string; status: string; content: string }
+  | { type: 'toolCall'; toolCallId: string; name: string; title: string; status: string; content: string }
+  | { type: 'toolCallUpdate'; toolCallId: string; name: string; title: string; status: string; content: string }
   | {
       type: 'requestPermission';
       id: number;
+      toolCallId: string;
       toolName: string;
       params: string;
       options: Array<{ optionId: string; label: string }>;
@@ -28,9 +29,11 @@ export interface ChatItem {
   toolCallId?: string;
   toolStatus?: string;
   toolName?: string;
+  toolTitle?: string;
   permissionRequestId?: number;
   permissionOptions?: Array<{ optionId: string; label: string }>;
   resolved?: boolean;
+  resolvedOptionId?: string;
 }
 
 export interface QueuedPrompt {
