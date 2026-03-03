@@ -1,3 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
-  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM5.5 9.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm4 0a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM8 12.5c-1.5 0-2.5-.8-2.5-1.5h5c0 .7-1 1.5-2.5 1.5z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="5 10 90 80">
+  <polyline points="22,38 10,50 22,62" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <polyline points="78,38 90,50 78,62" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <mask id="ghost-mask">
+    <path d="M 36 78 C 28 72, 28 50, 32 35 C 38 18, 62 18, 68 35 C 72 50, 72 72, 64 78 C 60 72, 55 82, 50 76 C 45 82, 40 72, 36 78 Z" fill="white" />
+    <ellipse cx="48" cy="42" rx="4" ry="6" fill="black" />
+    <ellipse cx="60" cy="42" rx="4" ry="6" fill="black" />
+  </mask>
+
+  <rect x="0" y="0" width="100" height="100" fill="currentColor" mask="url(#ghost-mask)" />
 </svg>
