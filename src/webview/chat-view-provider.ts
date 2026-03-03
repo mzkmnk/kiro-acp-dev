@@ -16,7 +16,7 @@ import type {
 } from '../acp/types';
 
 export type WebviewToExtensionMessage =
-  | { type: 'prompt'; text: string }
+  | { type: 'prompt'; text: string; modeId?: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
   | { type: 'switchSession'; sessionId: string }
@@ -227,6 +227,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
           }
 
           const sessionId = await this.ensureSession();
+          if (message.modeId) {
+            await this.applyConfigOption(sessionId, 'mode', message.modeId);
+          }
           await this.acpClient.prompt(sessionId, [{ type: 'text', text }]);
           await this.postMessage({ type: 'turnEnd' });
           return;

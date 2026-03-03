@@ -10,7 +10,7 @@ export interface SessionInfo {
 }
 
 export type WebviewToExtensionMessage =
-  | { type: 'prompt'; text: string }
+  | { type: 'prompt'; text: string; modeId?: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
   | { type: 'switchSession'; sessionId: string }

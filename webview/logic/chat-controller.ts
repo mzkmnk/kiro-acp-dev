@@ -41,6 +41,7 @@ export class ChatController {
   private inFlightTurns = 0;
   private pendingAgentChunk = '';
   private agentChunkRafId?: number;
+  private pendingModeId?: string;
 
   constructor() {
     this.restorePersistedState();
@@ -169,6 +170,16 @@ export class ChatController {
    *               新しい値。
    */
   public setConfigOption(configId: string, value: string): void {
+    const opt = this.state.configOptions.find((o) => o.id === configId);
+    if (opt?.category === 'mode') {
+      this.pendingModeId = value;
+      this.setState({
+        configOptions: this.state.configOptions.map((o) =>
+          o.id === configId ? { ...o, currentValue: value } : o,
+        ),
+      });
+      return;
+    }
     this.vscode.postMessage({ type: 'setConfigOption', configId, value });
   }
 
@@ -385,7 +396,9 @@ export class ChatController {
     this.pushItem({ id: this.createId(), role: 'user', text });
     this.inFlightTurns += 1;
     this.setState({ streaming: true });
-    this.vscode.postMessage({ type: 'prompt', text });
+    const modeId = this.pendingModeId;
+    this.pendingModeId = undefined;
+    this.vscode.postMessage({ type: 'prompt', text, modeId });
   }
 
   private upsertToolCall(
