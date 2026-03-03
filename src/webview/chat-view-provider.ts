@@ -18,8 +18,22 @@ export type WebviewToExtensionMessage =
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
-  | { type: 'toolCall'; toolCallId: string; name: string; title: string; status: string; content: string }
-  | { type: 'toolCallUpdate'; toolCallId: string; name: string; title: string; status: string; content: string }
+  | {
+      type: 'toolCall';
+      toolCallId: string;
+      name: string;
+      title: string;
+      status: string;
+      content: string;
+    }
+  | {
+      type: 'toolCallUpdate';
+      toolCallId: string;
+      name: string;
+      title: string;
+      status: string;
+      content: string;
+    }
   | {
       type: 'requestPermission';
       id: number;
@@ -294,15 +308,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
 
   private toolKindLabel(kind: string | undefined): string {
     switch (kind) {
-      case 'read': return 'read';
-      case 'edit': return 'edit';
-      case 'delete': return 'delete';
-      case 'move': return 'move';
-      case 'search': return 'search';
-      case 'execute': return 'shell';
-      case 'think': return 'think';
-      case 'fetch': return 'fetch';
-      default: return 'tool';
+      case 'read':
+        return 'read';
+      case 'edit':
+        return 'edit';
+      case 'delete':
+        return 'delete';
+      case 'move':
+        return 'move';
+      case 'search':
+        return 'search';
+      case 'execute':
+        return 'shell';
+      case 'think':
+        return 'think';
+      case 'fetch':
+        return 'fetch';
+      default:
+        return 'tool';
     }
   }
 
