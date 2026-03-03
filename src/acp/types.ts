@@ -280,6 +280,11 @@ export interface AvailableCommandsUpdate {
   availableCommands: AvailableCommand[];
 }
 
+export interface ConfigOptionsUpdate {
+  sessionUpdate: 'config_options_update';
+  configOptions: ConfigOption[];
+}
+
 export type SessionUpdate =
   | AgentMessageChunk
   | UserMessageChunk
@@ -287,7 +292,8 @@ export type SessionUpdate =
   | ToolCallUpdate
   | TurnEnd
   | CurrentModeUpdate
-  | AvailableCommandsUpdate;
+  | AvailableCommandsUpdate
+  | ConfigOptionsUpdate;
 
 export interface SessionUpdateParams {
   sessionId: string;
@@ -391,7 +397,43 @@ export interface TerminalReleaseParams {
 }
 
 // ============================================================
-// session/set_mode, session/set_model
+// Session Config Options (ACP spec)
+// ============================================================
+
+export type ConfigOptionCategory = 'mode' | 'model' | 'thought_level' | string;
+
+export interface ConfigOptionValue {
+  value: string;
+  name: string;
+  description?: string;
+}
+
+export interface ConfigOption {
+  id: string;
+  name: string;
+  description?: string;
+  category?: ConfigOptionCategory;
+  type: 'select';
+  currentValue: string;
+  options: ConfigOptionValue[];
+}
+
+export interface SessionNewResultWithConfig extends SessionNewResult {
+  configOptions?: ConfigOption[];
+}
+
+export interface SessionSetConfigOptionParams {
+  sessionId: string;
+  configId: string;
+  value: string;
+}
+
+export interface SessionSetConfigOptionResult {
+  configOptions: ConfigOption[];
+}
+
+// ============================================================
+// session/set_mode, session/set_model (legacy)
 // ============================================================
 
 export interface SessionSetModeParams {

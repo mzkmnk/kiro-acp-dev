@@ -1,5 +1,21 @@
-import type { ChatItem, ChatState, ExtensionToWebviewMessage, QueuedPrompt } from './types';
+import type {
+  ChatItem,
+  ChatState,
+  ConfigOptionState,
+  ExtensionToWebviewMessage,
+  QueuedPrompt,
+} from './types';
 import { getVsCodeApi } from './vscode-api';
+
+/**
+ * Serializable subset of ChatState persisted via VS Code webview state API.
+ * VS Code Webview state API で永続化される ChatState のシリアライズ可能なサブセット。
+ */
+interface PersistedState {
+  items: ChatItem[];
+  statusText: string;
+  configOptions: ConfigOptionState[];
+}
 
 /**
  * Manages ACP chat state and VS Code postMessage bridge independent from UI rendering.
@@ -15,6 +31,7 @@ export class ChatController {
     queue: [],
     statusText: 'Connecting...',
     streaming: false,
+    configOptions: [],
   };
 
   private activeAgentMessageId?: string;
@@ -23,6 +40,8 @@ export class ChatController {
   private agentChunkRafId?: number;
 
   constructor() {
+    this.restorePersistedState();
+
     this.onWindowMessage = (event) => {
       this.handleExtensionMessage(event.data);
     };
@@ -94,7 +113,7 @@ export class ChatController {
     this.vscode.postMessage({ type: 'newSession' });
     this.activeAgentMessageId = undefined;
     this.inFlightTurns = 0;
-    this.setState({ items: [], queue: [], streaming: false });
+    this.setState({ items: [], queue: [], streaming: false, configOptions: [] });
   }
 
   /**
@@ -121,6 +140,19 @@ export class ChatController {
         item.id === target.id ? { ...item, resolved: true, resolvedOptionId: optionId } : item,
       ),
     });
+  }
+
+  /**
+   * Sends a config option change to the extension host.
+   * 設定オプションの変更をエクステンションホストに送信します。
+   *
+   * @param configId - Config option identifier.
+   *                   設定オプションの識別子。
+   * @param value - New value.
+   *               新しい値。
+   */
+  public setConfigOption(configId: string, value: string): void {
+    this.vscode.postMessage({ type: 'setConfigOption', configId, value });
   }
 
   /**
@@ -247,6 +279,9 @@ export class ChatController {
         this.flushQueueIfIdle();
         this.setState({ streaming: this.inFlightTurns > 0 });
         return;
+      case 'configOptions':
+        this.setState({ configOptions: message.options });
+        return;
     }
   }
 
@@ -364,7 +399,30 @@ export class ChatController {
       ...this.state,
       ...patch,
     };
+    this.persistState();
     this.notify();
+  }
+
+  private persistState(): void {
+    const persisted: PersistedState = {
+      items: this.state.items,
+      statusText: this.state.statusText,
+      configOptions: this.state.configOptions,
+    };
+    this.vscode.setState(persisted);
+  }
+
+  private restorePersistedState(): void {
+    const raw = this.vscode.getState() as PersistedState | undefined;
+    if (!raw || !Array.isArray(raw.items)) {
+      return;
+    }
+    this.state = {
+      ...this.state,
+      items: raw.items,
+      statusText: raw.statusText || this.state.statusText,
+      configOptions: raw.configOptions ?? [],
+    };
   }
 
   private notify(): void {

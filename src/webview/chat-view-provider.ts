@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 
 import { AcpClient } from '../acp/client';
 import type {
+  ConfigOption,
+  ConfigOptionsUpdate,
   InitializeResult,
   SessionRequestPermissionParams,
   SessionRequestPermissionResult,
@@ -14,7 +16,8 @@ export type WebviewToExtensionMessage =
   | { type: 'prompt'; text: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
-  | { type: 'permissionResponse'; id: number; optionId: string };
+  | { type: 'permissionResponse'; id: number; optionId: string }
+  | { type: 'setConfigOption'; configId: string; value: string };
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
@@ -44,7 +47,17 @@ export type ExtensionToWebviewMessage =
     }
   | { type: 'turnEnd' }
   | { type: 'error'; message: string }
-  | { type: 'ready'; agentInfo: { name: string; version: string } };
+  | { type: 'ready'; agentInfo: { name: string; version: string } }
+  | {
+      type: 'configOptions';
+      options: Array<{
+        id: string;
+        name: string;
+        category?: string;
+        currentValue: string;
+        values: Array<{ value: string; name: string }>;
+      }>;
+    };
 
 /**
  * Provides and bridges the chat webview with ACP session APIs.
@@ -58,6 +71,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   private initializeResult?: InitializeResult;
   private startPromise?: Promise<InitializeResult>;
   private sessionPromise?: Promise<string>;
+  private configOptions: ConfigOption[] = [];
   private readonly pendingPermissionRequests = new Map<number, (optionId: string) => void>();
   private readonly disposables: vscode.Disposable[];
 
@@ -177,6 +191,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
           resolver(message.optionId);
           return;
         }
+        case 'setConfigOption': {
+          if (!this.sessionId) {
+            return;
+          }
+          const result = await this.acpClient.setConfigOption(
+            this.sessionId,
+            message.configId,
+            message.value,
+          );
+          this.configOptions = result.configOptions;
+          await this.postConfigOptions();
+          return;
+        }
       }
     } catch (error) {
       await this.postError(error);
@@ -228,6 +255,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.ensureStarted();
       const result = await this.acpClient.newSession(this.workspacePath);
       this.sessionId = result.sessionId;
+
+      const resultWithConfig = result as { configOptions?: ConfigOption[] };
+      if (resultWithConfig.configOptions) {
+        this.configOptions = resultWithConfig.configOptions;
+        await this.postConfigOptions();
+      }
+
       return result.sessionId;
     })();
 
@@ -277,6 +311,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       }
       case 'turn_end': {
         await this.postMessage({ type: 'turnEnd' });
+        return;
+      }
+      case 'config_options_update': {
+        this.configOptions = (update as ConfigOptionsUpdate).configOptions;
+        await this.postConfigOptions();
         return;
       }
       default:
@@ -421,6 +460,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       default:
         return kind;
     }
+  }
+
+  private async postConfigOptions(): Promise<void> {
+    await this.postMessage({
+      type: 'configOptions',
+      options: this.configOptions.map((opt) => ({
+        id: opt.id,
+        name: opt.name,
+        category: opt.category,
+        currentValue: opt.currentValue,
+        values: opt.options.map((v) => ({ value: v.value, name: v.name })),
+      })),
+    });
   }
 
   private async postError(error: unknown): Promise<void> {

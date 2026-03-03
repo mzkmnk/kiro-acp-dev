@@ -11,6 +11,7 @@ export function App(): React.JSX.Element {
       items={state.items}
       queue={state.queue}
       streaming={state.streaming}
+      configOptions={state.configOptions}
       onSubmitPrompt={(text) => controller.sendPrompt(text)}
       onCancel={() => controller.cancel()}
       onNewSession={() => controller.newSession()}
@@ -19,6 +20,7 @@ export function App(): React.JSX.Element {
       onPermissionResponse={(requestId, optionId) =>
         controller.respondPermission(requestId, optionId)
       }
+      onSetConfigOption={(configId, value) => controller.setConfigOption(configId, value)}
     />
   );
 }

@@ -2,6 +2,8 @@ import type { WebviewToExtensionMessage } from './types';
 
 type VsCodeApi = {
   postMessage(message: WebviewToExtensionMessage): void;
+  getState(): unknown;
+  setState(state: unknown): void;
 };
 
 declare const acquireVsCodeApi: () => VsCodeApi;

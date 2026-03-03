@@ -24,6 +24,8 @@ import type {
   SessionNewParams,
   SessionNewResult,
   SessionPromptParams,
+  SessionSetConfigOptionParams,
+  SessionSetConfigOptionResult,
   SessionUpdateParams,
 } from './types';
 
@@ -200,6 +202,28 @@ export class AcpClient {
   public cancel(sessionId: string): void {
     const params: SessionCancelParams = { sessionId };
     this.sendNotification('session/cancel', params);
+  }
+
+  /**
+   * Changes a session config option (e.g. model, mode).
+   * セッションの設定オプション（モデル、モードなど）を変更します。
+   *
+   * @param sessionId - Target ACP session ID.
+   *                    対象の ACP セッション ID。
+   * @param configId - Config option identifier.
+   *                   設定オプションの識別子。
+   * @param value - New value for the config option.
+   *               設定オプションの新しい値。
+   * @returns Updated config options.
+   *          更新後の設定オプション一覧。
+   */
+  public async setConfigOption(
+    sessionId: string,
+    configId: string,
+    value: string,
+  ): Promise<SessionSetConfigOptionResult> {
+    const params: SessionSetConfigOptionParams = { sessionId, configId, value };
+    return this.sendRequest<SessionSetConfigOptionResult>('session/set_config_option', params);
   }
 
   /**

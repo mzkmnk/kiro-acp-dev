@@ -2,7 +2,8 @@ export type WebviewToExtensionMessage =
   | { type: 'prompt'; text: string }
   | { type: 'cancel' }
   | { type: 'newSession' }
-  | { type: 'permissionResponse'; id: number; optionId: string };
+  | { type: 'permissionResponse'; id: number; optionId: string }
+  | { type: 'setConfigOption'; configId: string; value: string };
 
 export type ExtensionToWebviewMessage =
   | { type: 'agentMessageChunk'; text: string }
@@ -32,9 +33,21 @@ export type ExtensionToWebviewMessage =
     }
   | { type: 'turnEnd' }
   | { type: 'error'; message: string }
-  | { type: 'ready'; agentInfo: { name: string; version: string } };
+  | { type: 'ready'; agentInfo: { name: string; version: string } }
+  | {
+      type: 'configOptions';
+      options: ConfigOptionState[];
+    };
 
 export type ChatRole = 'user' | 'agent' | 'system' | 'error' | 'tool' | 'permission';
+
+export interface ConfigOptionState {
+  id: string;
+  name: string;
+  category?: string;
+  currentValue: string;
+  values: Array<{ value: string; name: string }>;
+}
 
 export interface ChatItem {
   id: string;
@@ -60,4 +73,5 @@ export interface ChatState {
   queue: QueuedPrompt[];
   statusText: string;
   streaming: boolean;
+  configOptions: ConfigOptionState[];
 }

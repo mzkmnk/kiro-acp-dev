@@ -20,7 +20,7 @@ import bash from 'highlight.js/lib/languages/bash';
 import markdown from 'highlight.js/lib/languages/markdown';
 import { Marked } from 'marked';
 
-import type { ChatItem, QueuedPrompt } from '../../logic/types';
+import type { ChatItem, ConfigOptionState, QueuedPrompt } from '../../logic/types';
 
 hljs.registerLanguage('plaintext', plaintext);
 hljs.registerLanguage('text', plaintext);
@@ -70,24 +70,28 @@ export interface ChatViewProps {
   items: ChatItem[];
   queue: QueuedPrompt[];
   streaming: boolean;
+  configOptions: ConfigOptionState[];
   onSubmitPrompt: (text: string) => void;
   onCancel: () => void;
   onNewSession: () => void;
   onSendQueuedNow: (queuedPromptId: string) => void;
   onRemoveQueued: (queuedPromptId: string) => void;
   onPermissionResponse: (requestId: number, optionId: string) => void;
+  onSetConfigOption: (configId: string, value: string) => void;
 }
 
 export function ChatView({
   items,
   queue,
   streaming,
+  configOptions,
   onSubmitPrompt,
   onCancel,
   onNewSession,
   onSendQueuedNow,
   onRemoveQueued,
   onPermissionResponse,
+  onSetConfigOption,
 }: ChatViewProps): React.JSX.Element {
   const [prompt, setPrompt] = React.useState('');
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -217,10 +221,21 @@ export function ChatView({
               >
                 <Plus className="h-4 w-4" />
               </button>
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-1">
-                auto
-                <ChevronDown className="h-3.5 w-3.5" />
-              </span>
+              {configOptions
+                .filter((opt) => opt.category === 'model')
+                .map((opt) => (
+                  <ModelSelector
+                    key={opt.id}
+                    option={opt}
+                    onChange={(value) => onSetConfigOption(opt.id, value)}
+                  />
+                ))}
+              {configOptions.filter((opt) => opt.category === 'model').length === 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-1">
+                  auto
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </span>
+              ) : null}
             </div>
 
             <button
@@ -403,5 +418,70 @@ function PermissionRow({
         </div>
       ) : null}
     </article>
+  );
+}
+
+function ModelSelector({
+  option,
+  onChange,
+}: {
+  option: ConfigOptionState;
+  onChange: (value: string) => void;
+}): React.JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const currentLabel =
+    option.values.find((v) => v.value === option.currentValue)?.name ?? option.currentValue;
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)]"
+      >
+        {currentLabel}
+        <ChevronDown className="h-3.5 w-3.5" />
+      </button>
+      {open ? (
+        <div className="absolute bottom-full left-0 z-20 mb-1 min-w-40 rounded-md border border-(--vscode-panel-border) bg-(--vscode-sideBar-background) py-1 shadow-lg">
+          {option.values.map((v) => (
+            <button
+              key={v.value}
+              type="button"
+              onClick={() => {
+                onChange(v.value);
+                setOpen(false);
+              }}
+              className={`flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-[color-mix(in_srgb,var(--vscode-editor-background)_70%,white_5%)] ${
+                v.value === option.currentValue
+                  ? 'text-(--vscode-textLink-foreground)'
+                  : 'text-(--vscode-editor-foreground)'
+              }`}
+            >
+              {v.value === option.currentValue ? (
+                <Check className="h-3 w-3" />
+              ) : (
+                <span className="h-3 w-3" />
+              )}
+              {v.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
